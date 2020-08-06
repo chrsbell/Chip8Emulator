@@ -16,6 +16,10 @@ def main():
 
     # Context manager will handle deallocation of resources
     with renderer.create_program():
+        renderer.set_pixel(0, 0, 0)
+        renderer.set_pixel(1, 0, 0)
+        renderer.set_pixel(1, 1, 0)
+        renderer.set_pixel(renderer.display_width - 1, renderer.display_height - 1, 0)
         while 1:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

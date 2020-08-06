@@ -1,5 +1,6 @@
 import OpenGL.GL as GL
 import OpenGL.GL.shaders
+OpenGL.ERROR_LOGGING = False
 import numpy
 import ctypes
 import contextlib
@@ -54,6 +55,9 @@ class Renderer:
                 self.attributes[attribute] = GL.glGetAttribLocation(self.shader, attribute)
                 GL.glEnableVertexAttribArray(self.attributes[attribute])
             yield
+        except GL.GLerror as error:
+            print(error.__repr__())
+            yield
         finally:
             for attribute in self.attributes.values():
                 GL.glDisableVertexAttribArray(attribute)
@@ -74,9 +78,13 @@ class Renderer:
     @contextlib.contextmanager
     def create_program(self):
         """Creates the shader and vertex buffers"""
-        with self.bind_shader():
-            with self.create_vertex_objects():
-                yield
+        try:
+            with self.bind_shader():
+                with self.create_vertex_objects():
+                    yield
+        except GL.GLerror as error:
+            print(error.__repr__())
+            yield
 
     @contextlib.contextmanager
     def create_vertex_objects(self):
@@ -92,7 +100,6 @@ class Renderer:
                 GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_object[0])
                 GL.glVertexAttribPointer(self.attributes['position'], 2, GL.GL_FLOAT, False, 0,
                                          ctypes.c_void_p(0))
-
                 # Add vertices of 'pixels' to the buffer
                 # The position of each vertex is in normalized device coordinate space
                 x_increment = 2.0 / self.display_width
@@ -115,17 +122,25 @@ class Renderer:
                 GL.glVertexAttribPointer(self.attributes['pixel_state'], 1, GL.GL_INT, False, 0,
                                          ctypes.c_void_p(0))
                 self.display_buffer = numpy.array(self.display_buffer, dtype=numpy.int32)
-                for i in range(256, 512):
-                    self.display_buffer[i] = 0.0
                 # Size of float (4) * number of vertices in a square (4) * number of 'pixels'
                 GL.glBufferData(GL.GL_ARRAY_BUFFER, 4 * 4 * self.display_height * self.display_width,
-                                self.display_buffer, GL.GL_STATIC_DRAW)
+                                self.display_buffer, GL.GL_DYNAMIC_DRAW)
+                GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
                 yield
         finally:
-            # Unbind VAO first, then VBO
+            # Unbind and delete VAO first, then VBOs
             GL.glBindVertexArray(0)
+            GL.glDeleteVertexArrays(1, [vertex_array_object])
             GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
-            GL.glDeleteBuffers(1, self.buffer_object)
+            GL.glDeleteBuffers(2, self.buffer_object)
+
+    def set_pixel(self, x, y, on):
+        # Get offset into buffer and update only that pixel
+        start = (y * self.display_width * 4 * 4) + (x * 4 * 4)
+        data = numpy.array([numpy.int32(on)] * 4, numpy.int32)
+        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_object[1])
+        GL.glBufferSubData(GL.GL_ARRAY_BUFFER, start, 4 * 4, data)
+        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
 
     def display(self):
         """Draw each 'pixel\'"""
