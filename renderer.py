@@ -15,30 +15,36 @@ class Renderer:
         self.display_width = 64
         self.display_height = 32
 
+        # A Chip-8 pixel is either on or off, 4 vertices per pixel
+        self.display_buffer = [1] * (4 * self.display_height * self.display_width)
+        self.vertex_buffer = []
+
         self.attributes = {}
         self.shader = 0
 
         self.vertex_shader = """
-        #version 410
+        #version 330
 
-        in vec4 position;
+        in vec2 position;
+        in int pixel_state;
+        flat out int color; //don't interpolate the color
         void main()
         {
-           gl_Position = position;
+           color = pixel_state;
+           gl_Position.xy = position.xy;
+           gl_Position.zw = vec2(0.0, 1.0);
         }
         """
 
         self.fragment_shader = """
-        #version 410
-
+        #version 330
+        
+        flat in int color;
         void main()
         {
-           gl_FragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+           gl_FragColor = vec4(color, color, color, color);
         }
         """
-
-        GL.glClearColor(0.5, 0.5, 0.5, 1.0)
-        GL.glEnable(GL.GL_DEPTH_TEST)
 
     @contextlib.contextmanager
     def add_attributes(self, attributes):
@@ -47,7 +53,7 @@ class Renderer:
             for attribute in attributes:
                 self.attributes[attribute] = GL.glGetAttribLocation(self.shader, attribute)
                 GL.glEnableVertexAttribArray(self.attributes[attribute])
-                yield
+            yield
         finally:
             for attribute in self.attributes.values():
                 GL.glDisableVertexAttribArray(attribute)
@@ -74,42 +80,55 @@ class Renderer:
 
     @contextlib.contextmanager
     def create_vertex_objects(self):
-        """Generates the VAO and VBO"""
+        """Generates the VAO and VBOs"""
+        # The VAO contains both position and color VBOs
         vertex_array_object = GL.glGenVertexArrays(1)
-        vertex_buffer = GL.glGenBuffers(1)
+        GL.glBindVertexArray(vertex_array_object)
+        # Generate two VBOs
+        self.buffer_object = GL.glGenBuffers(2)
         try:
-            # Bind the buffers
-            GL.glBindVertexArray(vertex_array_object)
-            GL.glBindBuffer(GL.GL_ARRAY_BUFFER, vertex_buffer)
+            with self.add_attributes(['position', 'pixel_state']):
+                # Bind the position buffer and describe/send its data
+                GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_object[0])
+                GL.glVertexAttribPointer(self.attributes['position'], 2, GL.GL_FLOAT, False, 0,
+                                         ctypes.c_void_p(0))
 
-            with self.add_attributes(['position']):
-                # Describe vertex information
-                GL.glVertexAttribPointer(self.attributes['position'], 4, GL.GL_FLOAT, False, 0, ctypes.c_void_p(0))
-
-                # Add vertices to the buffer
+                # Add vertices of 'pixels' to the buffer
+                # The position of each vertex is in normalized device coordinate space
                 x_increment = 2.0 / self.display_width
                 y_increment = 2.0 / self.display_height
-                vertices = []
-                for i in range(self.display_width):
-                    for j in range(self.display_height):
+                for j in range(self.display_height):
+                    for i in range(self.display_width):
+                        # Add each 'pixel' to the list
                         top_left = [-1.0 + (i * x_increment), -1.0 + (j * y_increment)]
-                        vertices.extend([top_left[0], top_left[1], 0.0, 1.0])
-                        vertices.extend([top_left[0] + x_increment, top_left[1], 0.0, 1.0])
-                        vertices.extend([top_left[0] + x_increment, top_left[1] + y_increment, 0.0, 1.0])
-                        vertices.extend([top_left[0], top_left[1] + y_increment, 0.0, 1.0])
-                vertices = numpy.array(vertices, dtype=numpy.float32)
-                # Size of float (4) *  number of components in a vertex (4) * number of vertices in a square (4)
-                GL.glBufferData(GL.GL_ARRAY_BUFFER, 4 * 4 * 4 * self.display_width * self.display_height,
-                                vertices, GL.GL_STATIC_DRAW)
+                        self.vertex_buffer.extend([top_left[0], top_left[1]])
+                        self.vertex_buffer.extend([top_left[0] + x_increment, top_left[1]])
+                        self.vertex_buffer.extend([top_left[0] + x_increment, top_left[1] + y_increment])
+                        self.vertex_buffer.extend([top_left[0], top_left[1] + y_increment])
+                self.vertex_buffer = numpy.array(self.vertex_buffer, dtype=numpy.float32)
+                # Size of float (4) *  number of components in a vertex (2) * number of vertices in a square (4) * number of 'pixels'
+                GL.glBufferData(GL.GL_ARRAY_BUFFER, 4 * 2 * 4 * self.display_height * self.display_width,
+                                self.vertex_buffer, GL.GL_STATIC_DRAW)
+
+                # Bind the color buffer and describe/send its data
+                GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_object[1])
+                GL.glVertexAttribPointer(self.attributes['pixel_state'], 1, GL.GL_INT, False, 0,
+                                         ctypes.c_void_p(0))
+                self.display_buffer = numpy.array(self.display_buffer, dtype=numpy.int32)
+                for i in range(256, 512):
+                    self.display_buffer[i] = 0.0
+                # Size of float (4) * number of vertices in a square (4) * number of 'pixels'
+                GL.glBufferData(GL.GL_ARRAY_BUFFER, 4 * 4 * self.display_height * self.display_width,
+                                self.display_buffer, GL.GL_STATIC_DRAW)
                 yield
         finally:
             # Unbind VAO first, then VBO
             GL.glBindVertexArray(0)
             GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
-            GL.glDeleteBuffers(1, [vertex_buffer])
+            GL.glDeleteBuffers(1, self.buffer_object)
 
     def display(self):
         """Draw each 'pixel\'"""
-        # Clear the color/depth buffers first
-        GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
+        # Clear the color buffer first
+        GL.glClear(GL.GL_COLOR_BUFFER_BIT)
         GL.glDrawArrays(GL.GL_QUADS, 0, 4 * self.display_height * self.display_width)
