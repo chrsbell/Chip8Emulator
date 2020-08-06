@@ -1,0 +1,1 @@
+Developing a Chip-8 emulator to refresh my understanding of Python and OpenGL
