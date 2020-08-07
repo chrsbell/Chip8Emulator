@@ -1,9 +1,13 @@
 import numpy as np
 import ctypes
 import contextlib
+import OpenGL
+# Manually show errors
+OpenGL.ERROR_LOGGING = False
+# Ensure we use numpy arrays instead of lists to prevent copying data
+OpenGL.ERROR_ON_COPY = True
 import OpenGL.GL as GL
 import OpenGL.GL.shaders
-OpenGL.ERROR_LOGGING = False
 
 
 class Renderer:
@@ -22,10 +26,12 @@ class Renderer:
         self.max_fps = 60
 
         # Holds the vertex/color buffers
-        self.buffer_object = []
+        self.buffer_object = np.array([])
         # A Chip-8 pixel is either on or off, 4 vertices per pixel
         self.display_buffer = np.array([0] * (4 * self.height * self.width), np.int32)
+        # Will be converted to numpy array later
         self.vertex_buffer = []
+        self.vertex_array_object = 0
 
         self.attributes = {}
         self.shader = 0
@@ -62,9 +68,6 @@ class Renderer:
                 self.attributes[attribute] = GL.glGetAttribLocation(self.shader, attribute)
                 GL.glEnableVertexAttribArray(self.attributes[attribute])
             yield
-        except GL.GLerror as error:
-            print(error.__repr__())
-            yield
         finally:
             for attribute in self.attributes.values():
                 GL.glDisableVertexAttribArray(attribute)
@@ -85,13 +88,15 @@ class Renderer:
     @contextlib.contextmanager
     def create_vertex_objects(self):
         """Generates the VAO and VBOs"""
+        # Shader attributes
+        attribute_names = ['position', 'pixel_state']
         # The VAO contains both position and color VBOs
-        vertex_array_object = GL.glGenVertexArrays(1)
-        GL.glBindVertexArray(vertex_array_object)
-        # Generate two VBOs
-        self.buffer_object = GL.glGenBuffers(2)
+        self.vertex_array_object = GL.glGenVertexArrays(1)
+        GL.glBindVertexArray(self.vertex_array_object)
+        # Generate VBOs for each of the shader attributes
+        self.buffer_object = GL.glGenBuffers(len(attribute_names))
         try:
-            with self.add_attributes(['position', 'pixel_state']):
+            with self.add_attributes(attribute_names):
                 # Bind the position buffer and describe/send its data
                 GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_object[0])
                 GL.glVertexAttribPointer(self.attributes['position'], 2, GL.GL_FLOAT, False, 0,
@@ -125,9 +130,9 @@ class Renderer:
         finally:
             # Unbind and delete VAO first, then VBOs
             GL.glBindVertexArray(0)
-            GL.glDeleteVertexArrays(1, [vertex_array_object])
+            GL.glDeleteVertexArrays(1, np.array([self.vertex_array_object]))
             GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
-            GL.glDeleteBuffers(2, self.buffer_object)
+            GL.glDeleteBuffers(len(self.attributes), self.buffer_object)
 
     def set_pixel(self, x, y, on):
         # Get offset into buffer and update only that pixel
