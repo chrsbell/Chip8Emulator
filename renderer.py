@@ -1,23 +1,30 @@
+import numpy as np
+import ctypes
+import contextlib
 import OpenGL.GL as GL
 import OpenGL.GL.shaders
 OpenGL.ERROR_LOGGING = False
-import numpy
-import ctypes
-import contextlib
+
 
 class Renderer:
 
     def __init__(self):
-        # Actual window size
-        self.window_width = 640
-        self.window_height = 480
+        """Modern OpenGL rendering class"""
 
         # Chip-8 display
-        self.display_width = 64
-        self.display_height = 32
+        self.width = 64
+        self.height = 32
 
+        # Actual window size
+        self.window_width = 1280
+        self.window_height = 720
+
+        self.max_fps = 120
+
+        # Holds the vertex/color buffers
+        self.buffer_object = []
         # A Chip-8 pixel is either on or off, 4 vertices per pixel
-        self.display_buffer = [1] * (4 * self.display_height * self.display_width)
+        self.display_buffer = np.array([0] * (4 * self.height * self.width), np.int32)
         self.vertex_buffer = []
 
         self.attributes = {}
@@ -76,7 +83,7 @@ class Renderer:
             GL.glUseProgram(0)
 
     @contextlib.contextmanager
-    def create_program(self):
+    def initialize_display(self):
         """Creates the shader and vertex buffers"""
         try:
             with self.bind_shader():
@@ -102,28 +109,27 @@ class Renderer:
                                          ctypes.c_void_p(0))
                 # Add vertices of 'pixels' to the buffer
                 # The position of each vertex is in normalized device coordinate space
-                x_increment = 2.0 / self.display_width
-                y_increment = 2.0 / self.display_height
-                for j in range(self.display_height):
-                    for i in range(self.display_width):
+                x_increment = 2.0 / self.width
+                y_increment = 2.0 / self.height
+                for y in range(self.height):
+                    for x in range(self.width):
                         # Add each 'pixel' to the list
-                        top_left = [-1.0 + (i * x_increment), -1.0 + (j * y_increment)]
+                        top_left = [-1.0 + (x * x_increment), -1.0 + (y * y_increment)]
                         self.vertex_buffer.extend([top_left[0], top_left[1]])
                         self.vertex_buffer.extend([top_left[0] + x_increment, top_left[1]])
                         self.vertex_buffer.extend([top_left[0] + x_increment, top_left[1] + y_increment])
                         self.vertex_buffer.extend([top_left[0], top_left[1] + y_increment])
-                self.vertex_buffer = numpy.array(self.vertex_buffer, dtype=numpy.float32)
-                # Size of float (4) *  number of components in a vertex (2) * number of vertices in a square (4) * number of 'pixels'
-                GL.glBufferData(GL.GL_ARRAY_BUFFER, 4 * 2 * 4 * self.display_height * self.display_width,
+                self.vertex_buffer = np.array(self.vertex_buffer, np.float32)
+                # sizeof float (4) * vertex components (2) * vertices in square (4) * number of 'pixels'
+                GL.glBufferData(GL.GL_ARRAY_BUFFER, 4 * 2 * 4 * self.height * self.width,
                                 self.vertex_buffer, GL.GL_STATIC_DRAW)
 
                 # Bind the color buffer and describe/send its data
                 GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_object[1])
                 GL.glVertexAttribPointer(self.attributes['pixel_state'], 1, GL.GL_INT, False, 0,
                                          ctypes.c_void_p(0))
-                self.display_buffer = numpy.array(self.display_buffer, dtype=numpy.int32)
-                # Size of float (4) * number of vertices in a square (4) * number of 'pixels'
-                GL.glBufferData(GL.GL_ARRAY_BUFFER, 4 * 4 * self.display_height * self.display_width,
+                # Size of int (4) * number of vertices in a square (4) * number of 'pixels'
+                GL.glBufferData(GL.GL_ARRAY_BUFFER, 4 * 4 * self.height * self.width,
                                 self.display_buffer, GL.GL_DYNAMIC_DRAW)
                 GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
                 yield
@@ -136,14 +142,14 @@ class Renderer:
 
     def set_pixel(self, x, y, on):
         # Get offset into buffer and update only that pixel
-        start = (y * self.display_width * 4 * 4) + (x * 4 * 4)
-        data = numpy.array([numpy.int32(on)] * 4, numpy.int32)
+        start = (y * self.width * 4 * 4) + (x * 4 * 4)
+        data = np.array([np.int32(on)] * 4, np.int32)
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_object[1])
         GL.glBufferSubData(GL.GL_ARRAY_BUFFER, start, 4 * 4, data)
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
 
-    def display(self):
-        """Draw each 'pixel\'"""
+    def render(self):
+        """Draw each 'pixel'"""
         # Clear the color buffer first
         GL.glClear(GL.GL_COLOR_BUFFER_BIT)
-        GL.glDrawArrays(GL.GL_QUADS, 0, 4 * self.display_height * self.display_width)
+        GL.glDrawArrays(GL.GL_QUADS, 0, 4 * self.height * self.width)

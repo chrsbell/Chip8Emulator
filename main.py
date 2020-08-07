@@ -1,3 +1,4 @@
+from interpreter import Interpreter
 from renderer import Renderer
 import pygame
 
@@ -10,26 +11,27 @@ def update_fps(clock):
 def main():
     # Routine set-up
     pygame.init()
-    renderer = Renderer()
-    screen = pygame.display.set_mode((renderer.window_width, renderer.window_height), pygame.OPENGL | pygame.DOUBLEBUF)
+    display = Renderer()
+    screen = pygame.display.set_mode((display.window_width, display.window_height),
+                                     pygame.OPENGL | pygame.DOUBLEBUF)
+    interpreter = Interpreter()
     clock = pygame.time.Clock()
-
-    # Context manager will handle deallocation of resources
-    with renderer.create_program():
-        renderer.set_pixel(0, 0, 0)
-        renderer.set_pixel(1, 0, 0)
-        renderer.set_pixel(1, 1, 0)
-        renderer.set_pixel(renderer.display_width - 1, renderer.display_height - 1, 0)
+    i = 0
+    # Context manager handles deallocation of OpenGL resources
+    with display.initialize_display():
+        interpreter.set_display(display)
         while 1:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return
                 if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
                     return
-
+            if (i < (display.width * display.height)):
+                display.set_pixel(i, 0, 1)
+                i += 1
             print(update_fps(clock))
-            clock.tick()
-            renderer.display()
+            clock.tick(display.max_fps)
+            display.render()
             pygame.display.flip()
 
 
