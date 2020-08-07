@@ -4,6 +4,8 @@ from tkinter import Menu, Tk, Toplevel, Button, Frame, messagebox
 from renderer import Renderer
 import contextlib
 from OpenGL.error import GLError
+from file_io import FileIO
+from interpreter import Interpreter
 
 
 class Window:
@@ -14,13 +16,18 @@ class Window:
 
         # Main window
         self.root = Tk()
+
         # OpenGL display
         self.display = Renderer()
+
+        self.interpreter = Interpreter()
+        self.interpreter.set_display(self.display)
+        self.file_io = FileIO(self.interpreter)
 
         # Setup the window frame
         self.menu_bar = Menu(self.root)
         self.file_menu = Menu(self.menu_bar, tearoff=0)
-        self.file_menu.add_command(label="Open ROM", command=self.donothing)
+        self.file_menu.add_command(label="Open ROM", command=self.file_io.open)
         self.file_menu.add_command(label="Save state", command=self.donothing)
         self.file_menu.add_command(label="Load state", command=self.donothing)
 

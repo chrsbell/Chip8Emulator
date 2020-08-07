@@ -1,4 +1,3 @@
-from window import Window
 import numpy as np
 
 
@@ -28,6 +27,11 @@ class Interpreter:
 
     def load_program_to_memory(self, file):
         """Stores the program in the memory buffer"""
+        b = bytes(file.read())
+        hex = b.hex()
+
+        for i in range(len(hex)):
+            print(hex[i*4:i*4+4])
         return
 
     def set_register(self, register, value):
