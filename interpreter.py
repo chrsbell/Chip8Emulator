@@ -1,4 +1,4 @@
-from renderer import Renderer
+from window import Window
 import numpy as np
 
 

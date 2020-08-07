@@ -16,10 +16,10 @@ class Renderer:
         self.height = 32
 
         # Actual window size
-        self.window_width = 1280
-        self.window_height = 720
+        self.window_width = 1024
+        self.window_height = 576
 
-        self.max_fps = 120
+        self.max_fps = 60
 
         # Holds the vertex/color buffers
         self.buffer_object = []
@@ -81,17 +81,6 @@ class Renderer:
             yield
         finally:
             GL.glUseProgram(0)
-
-    @contextlib.contextmanager
-    def initialize_display(self):
-        """Creates the shader and vertex buffers"""
-        try:
-            with self.bind_shader():
-                with self.create_vertex_objects():
-                    yield
-        except GL.GLerror as error:
-            print(error.__repr__())
-            yield
 
     @contextlib.contextmanager
     def create_vertex_objects(self):
