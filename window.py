@@ -30,8 +30,8 @@ class Window:
         self.menu_bar = Menu(self.root)
         self.file_menu = Menu(self.menu_bar, tearoff=0)
         self.file_menu.add_command(label="Open ROM", command=self.file_io.open)
-        self.file_menu.add_command(label="Save state", command=self.donothing)
-        self.file_menu.add_command(label="Load state", command=self.donothing)
+        self.file_menu.add_command(label="Save state", command=self.file_io.save_state)
+        self.file_menu.add_command(label="Load state", command=self.file_io.load_state())
 
         self.file_menu.add_separator()
 
@@ -56,11 +56,6 @@ class Window:
 
         self.error = False
         self.quit = False
-
-    def donothing(self):
-        filewin = Toplevel(self.root)
-        button = Button(filewin, text="Do nothing button")
-        button.pack()
 
     def show_opengl_error(self, error):
         self.error = True
