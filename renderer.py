@@ -142,6 +142,11 @@ class Renderer:
         GL.glBufferSubData(GL.GL_ARRAY_BUFFER, start, 4 * 4, data)
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
 
+    def clear_screen(self):
+        for x in self.width:
+            for y in self.height:
+                self.set_pixel(x, y, 0)
+
     def render(self):
         """Draw each 'pixel'"""
         # Clear the color buffer first
