@@ -23,9 +23,44 @@ class Interpreter:
         # Use a dictionary to look up which function to use for any opcode
         # https://en.wikipedia.org/wiki/CHIP-8
         self.opcode = {}
-        self.opcode[self.hash_opcode(0x10, 0x9E)] = self._8XY0
+        # Using 'F' as a placeholder for N, X, and Y
         self.opcode[self.hash_opcode(0x00, 0x00)] = 1
-        self.opcode[self.hash_opcode(0x00, 0x00)] = 1
+        self.opcode[self.hash_opcode(0x00, 0xE0)] = 1
+        self.opcode[self.hash_opcode(0x00, 0xEE)] = 1
+        self.opcode[self.hash_opcode(0x1F, 0xFF)] = 1
+        self.opcode[self.hash_opcode(0x2F, 0xFF)] = 1
+        self.opcode[self.hash_opcode(0x3F, 0xFF)] = 1
+        self.opcode[self.hash_opcode(0x4F, 0xFF)] = 1
+        self.opcode[self.hash_opcode(0x5F, 0xF0)] = 1
+        self.opcode[self.hash_opcode(0x6F, 0xFF)] = 1
+        self.opcode[self.hash_opcode(0x7F, 0xFF)] = 1
+        self.opcode[self.hash_opcode(0x8F, 0xF0)] = 1
+        self.opcode[self.hash_opcode(0x8F, 0xF1)] = 1
+        self.opcode[self.hash_opcode(0x8F, 0xF2)] = 1
+        self.opcode[self.hash_opcode(0x8F, 0xF3)] = 1
+        self.opcode[self.hash_opcode(0x8F, 0xF4)] = 1
+        self.opcode[self.hash_opcode(0x8F, 0xF5)] = 1
+        self.opcode[self.hash_opcode(0x8F, 0xF6)] = 1
+        self.opcode[self.hash_opcode(0x8F, 0xF7)] = 1
+        self.opcode[self.hash_opcode(0x8F, 0xFE)] = 1
+        self.opcode[self.hash_opcode(0x9F, 0xF0)] = 1
+        self.opcode[self.hash_opcode(0xAF, 0xFF)] = 1
+        self.opcode[self.hash_opcode(0xBF, 0xFF)] = 1
+        self.opcode[self.hash_opcode(0xCF, 0xFF)] = 1
+        self.opcode[self.hash_opcode(0xDF, 0xFF)] = 1
+        self.opcode[self.hash_opcode(0xEF, 0x9E)] = 1
+        self.opcode[self.hash_opcode(0xEF, 0xA1)] = 1
+        self.opcode[self.hash_opcode(0xFF, 0x07)] = 1
+        self.opcode[self.hash_opcode(0xFF, 0x0A)] = 1
+        self.opcode[self.hash_opcode(0xFF, 0x15)] = 1
+        self.opcode[self.hash_opcode(0xFF, 0x18)] = 1
+        self.opcode[self.hash_opcode(0xFF, 0x1E)] = 1
+        self.opcode[self.hash_opcode(0xFF, 0x29)] = 1
+        self.opcode[self.hash_opcode(0xFF, 0x33)] = 1
+        self.opcode[self.hash_opcode(0xFF, 0x55)] = 1
+        self.opcode[self.hash_opcode(0xFF, 0x65)] = 1
+
+        print(len(self.opcode))
 
 
     def load_program_to_memory(self, file):
@@ -53,15 +88,18 @@ class Interpreter:
 
     def hash_opcode(self, upper_byte, lower_byte):
         """Get an ID for a 2-byte opcode using the first and last 4 bits"""
-        upper_byte = upper_byte >> 4 & 0b1111
-        lower_byte = lower_byte & 0b1111
-        print(bin(upper_byte)[2:].zfill(8))
-        print(bin(lower_byte)[2:].zfill(8))
+        upper_bits = upper_byte >> 4 & 0b1111
+        lower_bits = lower_byte & 0b1111
+        # print(bin(upper_byte)[2:].zfill(8))
+        # print(bin(lower_byte)[2:].zfill(8))
         # Concatenate the bits
-        id = upper_byte << 4 | lower_byte
-        print(id)
-        return 0
+        hash_value = upper_bits << 4 | lower_bits
+        if hash_value in self.opcode:
+            # Need to encode using entire lower byte
+            hash_value = upper_bits << 8 | lower_byte
+            #print("Collision at " + hex(upper_byte) + hex(lower_byte)[2:] + " " + str(hash_value))
+        return hash_value
 
-    def _8XY0(self, x, y):
+    def _8XY0(self, x, y, n, addr, kk):
         """Sets value of VX to VY"""
         self.register_v[x] = self.register_v[y]
