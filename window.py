@@ -20,9 +20,11 @@ class Window:
         # OpenGL display
         self.display = Renderer()
 
-        self.interpreter = Interpreter()
-        self.interpreter.set_display(self.display)
+        self.interpreter = Interpreter(self.display)
         self.file_io = FileIO(self.interpreter)
+
+        with open('roms/PONG', 'rb') as file:
+            self.interpreter.load_program_to_memory(file)
 
         # Setup the window frame
         self.menu_bar = Menu(self.root)
@@ -51,7 +53,7 @@ class Window:
         pygame.display.set_mode((self.display.window_width, self.display.window_height),
                                 pygame.OPENGL | pygame.DOUBLEBUF)
         self.clock = pygame.time.Clock()
-        self.i = 0
+
         self.error = False
         self.quit = False
 
@@ -81,16 +83,13 @@ class Window:
             yield
 
     def update(self):
-        if self.i < (self.display.width * self.display.height):
-            self.display.set_pixel(self.i, 0, 1)
-            self.i += 1
         self.clock.tick(self.display.max_fps)
         self.display.render()
         pygame.display.flip()
         for event in pygame.event.get():
             if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
                 return
-        self.root.title("Chip-8 Emulator " + " ~ FPS: " + str(int(self.clock.get_fps())))
+        self.root.title("Chip-8 Emulator " + "~ FPS: " + str(int(self.clock.get_fps())))
         self.root.update_idletasks()
         self.root.update()
 

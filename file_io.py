@@ -1,5 +1,4 @@
 from tkinter import filedialog
-# from interpreter import Interpreter
 
 
 class FileIO:
