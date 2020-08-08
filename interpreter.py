@@ -20,6 +20,9 @@ class Interpreter:
         self.stack = np.array([0x0] * 0xF, np.uint16)
         # Reference to external display
         self.display = display
+        # Use a dictionary to quickly look up instructions
+        self.instruction = [0] * 0xF5
+        self.instruction[80] = self._8XY0
 
 
     def load_program_to_memory(self, file):
@@ -44,3 +47,7 @@ class Interpreter:
 
     def execute_instruction(self):
         """Executes the current instruction in the program counter register"""
+
+    def _8XY0(self, x, y):
+        """Sets value of VX to VY"""
+        self.register_v[x] = self.register_v[y]
