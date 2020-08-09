@@ -70,8 +70,6 @@ class Interpreter:
 
         self.initialized_hash = True
 
-        self._Fx65(5, 0, 0, 0, 0)
-
         print(len(self.opcode))
 
     def load_program_to_memory(self, file):
@@ -87,32 +85,40 @@ class Interpreter:
         for i in range(int(len(program) / 4)):
             opcode = program[i*4:i*4+4]
             # Need to split opcode in half to fit in a byte
-            self.memory_buffer[0x200 + i*2] = (int(opcode[:2], 16))
-            self.memory_buffer[0x200 + (i*2)+1] = (int(opcode[2:], 16))
+            #print((int(opcode[:2], 16)))
+            #print((int(opcode[2:], 16)))
+            self.memory_buffer[self.program_counter + i*2] = (int(opcode[:2], 16))
+            self.memory_buffer[self.program_counter + (i*2)+1] = (int(opcode[2:], 16))
 
         #self.execute_instruction()
 
     def execute_instruction(self):
         """Executes the current instruction in the program counter register"""
         upper_byte = self.memory_buffer[self.program_counter]
-        lower_byte = self.memory_buffer[self.program_counter + 0x001]
+        lower_byte = self.memory_buffer[self.program_counter + 1]
+        print(hex(upper_byte) + hex(lower_byte)[2:])
         x = upper_byte & 0b1111
         y = lower_byte >> 4 & 0b1111
         n = lower_byte & 0b1111
         address = x << 8 | lower_byte
-
-        self.opcode[self.hash_opcode(upper_byte, lower_byte)](x, y, n, address, lower_byte)
+        hash_value =  self.hash_opcode(upper_byte, lower_byte)
+        if not hash_value in self.opcode:
+            messagebox.showerror("ROM Error", "Couldn't read ROM...")
+        self.opcode[hash_value](x, y, n, address, lower_byte)
 
     def hash_opcode(self, upper_byte, lower_byte):
         """Gets an ID for a 2-byte opcode using the first and last 4-8 bits"""
         upper_bits = upper_byte >> 4 & 0b1111
-        lower_bits = lower_byte & 0b1111
-        # Concatenate the bits
-        hash_value = upper_bits << 4 | lower_bits
+        hash_value = upper_bits
         if not self.initialized_hash and hash_value in self.opcode:
-            # Need to encode using entire lower byte
-            hash_value = upper_bits << 8 | lower_byte
-            # print("Collision at " + hex(upper_byte) + hex(lower_byte)[2:] + " " + str(hash_value))
+            # Try using lower bits
+            lower_bits = lower_byte & 0b1111
+            # Concatenate the bits
+            hash_value = upper_bits << 4 | lower_bits
+            if hash_value in self.opcode:
+                # Need to encode using entire lower byte
+                hash_value = upper_bits << 8 | lower_byte
+                # print("Collision at " + hex(upper_byte) + hex(lower_byte)[2:] + " " + str(hash_value))
         print(hex(upper_byte) + hex(lower_byte)[2:] + ": " + str(hash_value))
         return hash_value
 
@@ -160,6 +166,7 @@ class Interpreter:
     def _6xkk(self, x, y, n, address, byte):
         """Set Vx = kk. The interpreter puts the value kk into register Vx."""
         self.register_v[x] = byte
+        self.program_counter += 2
 
     def _7xkk(self, x, y, n, address, byte):
         """Set Vx = Vx + kk. Adds the value kk to the value of register Vx, then stores the result in Vx."""

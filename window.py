@@ -84,6 +84,7 @@ class Window:
         for event in pygame.event.get():
             if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
                 return
+        self.interpreter.execute_instruction()
         self.root.title("Chip-8 Emulator " + "~ FPS: " + str(int(self.clock.get_fps())))
         self.root.update_idletasks()
         self.root.update()
