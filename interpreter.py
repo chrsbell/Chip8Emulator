@@ -119,7 +119,7 @@ class Interpreter:
                 # Need to encode using entire lower byte
                 hash_value = upper_bits << 8 | lower_byte
                 # print("Collision at " + hex(upper_byte) + hex(lower_byte)[2:] + " " + str(hash_value))
-        # print(hex(upper_byte) + hex(lower_byte)[2:] + ": " + str(hash_value))
+        print(hex(upper_byte) + hex(lower_byte)[2:] + ": " + str(hash_value))
         return hash_value
 
     def _0NNN(self, x, y, n, address, byte):
@@ -134,7 +134,8 @@ class Interpreter:
     def _00EE(self, x, y, n, address, byte):
         """Return from a subroutine. The interpreter sets the program counter to the address at the top of the stack,
         then subtracts 1 from the stack pointer. """
-        return
+        self.stack_pointer -= 1
+        self.program_counter = self.stack[self.stack_pointer]
 
     def _1nnn(self, x, y, n, address, byte):
         """Jump to location at address. The interpreter sets the program counter to address."""
@@ -143,7 +144,10 @@ class Interpreter:
     def _2nnn(self, x, y, n, address, byte):
         """Call subroutine at nnn. The interpreter increments the stack pointer, then puts the current PC on the top
         of the stack. The PC is then set to nnn. """
-        return
+        self.stack[self.stack_pointer] = self.program_counter
+        self.stack_pointer += 1
+        self.program_counter = address
+        # self.execute_instruction()
 
     def _3xkk(self, x, y, n, address, byte):
         """Skip next instruction if Vx = byte. The interpreter compares register Vx to byte, and if they are equal,
@@ -266,12 +270,19 @@ class Interpreter:
         VF is set to 1, otherwise it is set to 0. If the sprite is positioned so part of it is outside the
         coordinates of the display, it wraps around to the opposite side of the screen. """
         for j in range(n + 1):
-            sprite = bin(self.memory_buffer[self.register_i + j])[2:]
-            #print(sprite)
+            # Add padding to fit 8 bits
+            sprite = format(self.memory_buffer[self.register_i + j], '#010b')[2:]
+            print(sprite)
             for i in range(8):
                 #print(int(sprite[i]))
-                print(self.register_v[x] + i, self.register_v[y] - j)
-                self.display.set_pixel(self.register_v[x] + i, self.register_v[y] - j, int(sprite[i]))
+                vx = (self.register_v[x] + i) % self.display.width
+                vy = (self.register_v[y] + j) % self.display.height
+                print(vx, vy)
+                pixel_state = self.display.get_pixel(vx, vy)
+                if pixel_state and int(sprite[i]):
+                    # There was a collision
+                    self.register_v[0xF] = 1
+                self.display.set_pixel(vx, vy, int(sprite[i]) ^ pixel_state)
         self.program_counter += 2
 
     def _Ex9E(self, x, y, n, address, byte):
