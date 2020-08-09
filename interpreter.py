@@ -70,7 +70,7 @@ class Interpreter:
 
         self.initialized_hash = True
 
-        self.opcode[self.hash_opcode(0x82, 0xF4)](1, 2, 3, 4, 5)
+        self._Fx65(5, 0, 0, 0, 0)
 
         print(len(self.opcode))
 
@@ -117,15 +117,13 @@ class Interpreter:
         return hash_value
 
     def _0NNN(self, x, y, n, address, byte):
-        """Jump to a machine code routine at nnn.
-        This instruction is only used on the old computers on which Chip-8 was originally implemented. It is ignored by modern interpreters."""
+        """Jump to a machine code routine at nnn. This instruction is only used on the old computers on which Chip-8
+        was originally implemented. It is ignored by modern interpreters. """
         return
 
     def _00E0(self, x, y, n, address, byte):
         """Clear the display."""
         self.display.clear_screen()
-        self.program_counter += 0x001
-        return
 
     def _00EE(self, x, y, n, address, byte):
         """Return from a subroutine. The interpreter sets the program counter to the address at the top of the stack,
@@ -135,7 +133,6 @@ class Interpreter:
     def _1nnn(self, x, y, n, address, byte):
         """Jump to location at address. The interpreter sets the program counter to address."""
         self.program_counter = address
-        return
 
     def _2nnn(self, x, y, n, address, byte):
         """Call subroutine at nnn. The interpreter increments the stack pointer, then puts the current PC on the top
@@ -146,53 +143,44 @@ class Interpreter:
         """Skip next instruction if Vx = byte. The interpreter compares register Vx to byte, and if they are equal,
         increments the program counter by 2. """
         if self.register_v[x] == byte:
-            self.program_counter += 0x002
-        return
+            self.program_counter += 2
 
     def _4xkk(self, x, y, n, address, byte):
         """Skip next instruction if Vx != kk. The interpreter compares register Vx to kk, and if they are not equal,
         increments the program counter by 2. """
         if self.register_v[x] != byte:
-            self.program_counter += 0x002
-        return
+            self.program_counter += 2
 
     def _5xy0(self, x, y, n, address, byte):
         """Skip next instruction if Vx = Vy. The interpreter compares register Vx to register Vy, and if they are
         equal, increments the program counter by 2. """
         if self.register_v[x] == self.register_v[y]:
-            self.program_counter += 0x002
-        return
+            self.program_counter += 2
 
     def _6xkk(self, x, y, n, address, byte):
         """Set Vx = kk. The interpreter puts the value kk into register Vx."""
         self.register_v[x] = byte
-        return
 
     def _7xkk(self, x, y, n, address, byte):
         """Set Vx = Vx + kk. Adds the value kk to the value of register Vx, then stores the result in Vx."""
         self.register_v[x] += byte
-        return
 
     def _8xy0(self, x, y, n, address, byte):
         """Set Vx = Vy. Stores the value of register Vy in register Vx."""
         self.register_v[x] = self.register_v[y]
-        return
 
     def _8xy1(self, x, y, n, address, byte):
         """Set Vx = Vx OR Vy. Performs a bitwise OR on the values of Vx and Vy, then stores the result in Vx."""
         self.register_v[x] |= self.register_v[y]
-        return
 
     def _8xy2(self, x, y, n, address, byte):
         """Set Vx = Vx AND Vy. Performs a bitwise AND on the values of Vx and Vy, then stores the result in Vx."""
         self.register_v[x] &= self.register_v[y]
-        return
 
     def _8xy3(self, x, y, n, address, byte):
         """Set Vx = Vx XOR Vy. Performs a bitwise exclusive OR on the values of Vx and Vy, then stores the result in
         Vx. """
         self.register_v[x] ^= self.register_v[y]
-        return
 
     def _8xy4(self, x, y, n, address, byte):
         """Set Vx = Vx + Vy, set VF = carry. The values of Vx and Vy are added together. If the result is greater
@@ -202,43 +190,61 @@ class Interpreter:
         self.register_v[x] += self.register_v[y]
         if temp > self.register_v[x]:
             # There was an overflow
-            self.register_v[0xF] = 0x001
+            self.register_v[0xF] = 0x01
         else:
-            self.register_v[0xF] = 0x000
-        return
+            self.register_v[0xF] = 0x00
 
     def _8xy5(self, x, y, n, address, byte):
         """Set Vx = Vx - Vy, set VF = NOT borrow. If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted
         from Vx, and the results stored in Vx. """
-        return
+        if self.register_v[x] > self.register_v[y]:
+            self.register_v[0xF] = 0x01
+        else:
+            self.register_v[0xF] = 0x00
+        self.register_v[x] -= self.register_v[y]
 
     def _8xy6(self, x, y, n, address, byte):
         """Set Vx = Vx SHR 1. If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is
         divided by 2. """
-        return
+        if self.register_v[x] & 0b1:
+            self.register_v[0xF] = 0x01
+        else:
+            self.register_v[0xF] = 0x00
+        self.register_v[x] /= 2
 
     def _8xy7(self, x, y, n, address, byte):
         """Set Vx = Vy - Vx, set VF = NOT borrow. If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted
         from Vy, and the results stored in Vx. """
-        return
+        if self.register_v[y] > self.register_v[x]:
+            self.register_v[0xF] = 0x01
+        else:
+            self.register_v[0xF] = 0x00
+        self.register_v[x] = self.register_v[y] - self.register_v[x]
 
     def _8xyE(self, x, y, n, address, byte):
         """Set Vx = Vx SHL 1. If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is
         multiplied by 2. """
-        return
+        # Using string binary representation to check
+        bin_string = bin(self.register_v[x])
+        if len(bin_string) == 10 and int(bin_string[2]) == 1:
+            self.register_v[0xF] = 0x01
+        else:
+            self.register_v[0xF] = 0x00
+        self.register_v[x] *= 2
 
     def _9xy0(self, x, y, n, address, byte):
         """Skip next instruction if Vx != Vy. The values of Vx and Vy are compared, and if they are not equal,
         the program counter is increased by 2. """
-        return
+        if self.register_v[x] != self.register_v[y]:
+            self.program_counter += 2
 
     def _Annn(self, x, y, n, address, byte):
-        """Set I = nnn. The value of register I is set to nnn."""
-        return
+        """Set I = address"""
+        self.register_i = address
 
     def _Bnnn(self, x, y, n, address, byte):
         """Jump to location nnn + V0. The program counter is set to nnn plus the value of V0."""
-        return
+        self.program_counter = address + self.register_v[0x00]
 
     def _Cxkk(self, x, y, n, address, byte):
         """Set Vx = random byte AND kk. The interpreter generates a random number from 0 to 255, which is then ANDed
@@ -282,7 +288,7 @@ class Interpreter:
 
     def _Fx1E(self, x, y, n, address, byte):
         """Set I = I + Vx. The values of I and Vx are added, and the results are stored in I."""
-        return
+        self.register_i += self.register_i[x]
 
     def _Fx29(self, x, y, n, address, byte):
         """Set I = location of sprite for digit Vx. The value of I is set to the location for the hexadecimal sprite
@@ -293,14 +299,18 @@ class Interpreter:
         """Store BCD representation of Vx in memory locations I, I+1, and I+2. The interpreter takes the decimal
         value of Vx, and places the hundreds digit in memory at location in I, the tens digit at location I+1,
         and the ones digit at location I+2. """
-        return
+        decimal = self.register_v[x]
+        self.memory_buffer[self.register_i] = int(decimal / 100)
+        self.memory_buffer[self.register_i + 1] = int((decimal % 100) / 10)
+        self.memory_buffer[self.register_i + 2] = decimal % 10
 
     def _Fx55(self, x, y, n, address, byte):
         """Store registers V0 through Vx in memory starting at location I. The interpreter copies the values of
         registers V0 through Vx into memory, starting at the address in I. """
-        return
+        for i in range(x + 1):
+            self.memory_buffer[self.register_i + i] = self.register_v[i]
 
     def _Fx65(self, x, y, n, address, byte):
-        """Read registers V0 through Vx from memory starting at location I. The interpreter reads values from memory
-        starting at location I into registers V0 through Vx. """
-        return
+        """The interpreter reads values from memory starting at location I into registers V0 through Vx. """
+        for i in range(x + 1):
+            self.register_v[i] = self.memory_buffer[self.register_i + i]
