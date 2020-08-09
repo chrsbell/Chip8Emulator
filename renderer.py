@@ -25,11 +25,13 @@ class Renderer:
 
         self.max_fps = 60
 
-        # Holds the vertex/color buffers
+        # Whether each pixel is on or off
+        self.display_state = [[0 for y in range(self.height)] for x in range(self.width)]
+
+        # Objects for vertex/color buffers
         self.buffer_object = np.array([])
-        # A Chip-8 pixel is either on or off, 4 vertices per pixel
+        # Using 4 vertices per 'pixel'
         self.display_buffer = np.array([0] * (4 * self.height * self.width), np.int32)
-        # Will be converted to numpy array later
         self.vertex_buffer = []
         self.vertex_array_object = 0
 
@@ -134,6 +136,9 @@ class Renderer:
             GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
             GL.glDeleteBuffers(len(self.attributes), self.buffer_object)
 
+    def get_pixel(self, x, y):
+        return self.display_state[x][y]
+
     def set_pixel(self, x, y, on):
         # Get offset into buffer and update only that pixel
         start = (y * self.width * 4 * 4) + (x * 4 * 4)
@@ -141,6 +146,8 @@ class Renderer:
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_object[1])
         GL.glBufferSubData(GL.GL_ARRAY_BUFFER, start, 4 * 4, data)
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
+        # Update display state for interpreter
+        self.display_state[x][y] = on
 
     def clear_screen(self):
         for x in self.width:

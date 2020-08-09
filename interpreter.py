@@ -119,7 +119,7 @@ class Interpreter:
                 # Need to encode using entire lower byte
                 hash_value = upper_bits << 8 | lower_byte
                 # print("Collision at " + hex(upper_byte) + hex(lower_byte)[2:] + " " + str(hash_value))
-        print(hex(upper_byte) + hex(lower_byte)[2:] + ": " + str(hash_value))
+        # print(hex(upper_byte) + hex(lower_byte)[2:] + ": " + str(hash_value))
         return hash_value
 
     def _0NNN(self, x, y, n, address, byte):
@@ -248,6 +248,7 @@ class Interpreter:
     def _Annn(self, x, y, n, address, byte):
         """Set I = address"""
         self.register_i = address
+        self.program_counter += 2
 
     def _Bnnn(self, x, y, n, address, byte):
         """Jump to location nnn + V0. The program counter is set to nnn plus the value of V0."""
@@ -264,7 +265,14 @@ class Interpreter:
         at coordinates (Vx, Vy). Sprites are XORed onto the existing screen. If this causes any pixels to be erased,
         VF is set to 1, otherwise it is set to 0. If the sprite is positioned so part of it is outside the
         coordinates of the display, it wraps around to the opposite side of the screen. """
-        return
+        for j in range(n + 1):
+            sprite = bin(self.memory_buffer[self.register_i + j])[2:]
+            #print(sprite)
+            for i in range(8):
+                #print(int(sprite[i]))
+                print(self.register_v[x] + i, self.register_v[y] - j)
+                self.display.set_pixel(self.register_v[x] + i, self.register_v[y] - j, int(sprite[i]))
+        self.program_counter += 2
 
     def _Ex9E(self, x, y, n, address, byte):
         """Skip next instruction if key with the value of Vx is pressed. Checks the keyboard, and if the key
