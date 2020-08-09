@@ -8,19 +8,19 @@ class Interpreter:
         """Chip-8 interpreter"""
 
         # Interpreter can access 4KB of RAM
-        self.memory_buffer = np.array([0] * 0xFFF, np.ubyte)
+        self.memory_buffer = np.array([0] * 0x1000, np.ubyte)
         # 16 general purpose 8-bit registers
-        self.register_v = np.array([0] * 0xF, np.ubyte)
+        self.register_v = np.array([0] * 0x10, np.ubyte)
         # 16-bit register for memory addresses
         self.register_i = np.int16(0x0)
         # 8-bit register for delay/sound timers
-        self.register_s = np.byte(0)
+        self.register_s = np.byte(0x0)
         # 16-bit program counter register which stores current address
-        self.program_counter = np.int16(0x0)
+        self.program_counter = 0x200
         # 8-bit pointer to top of stack
         self.stack_pointer = np.byte(0)
         # 16 16-bit addresses which represent the call stack
-        self.stack = np.array([0x0] * 0xF, np.uint16)
+        self.stack = np.array([0x0] * 0x10, np.uint16)
         # Reference to external display
         self.display = display
 
@@ -29,6 +29,8 @@ class Interpreter:
         # Most of the descriptions are taken directly from http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#3.1
         # Using 'F' as a placeholder for N, X, and Y
         self.opcode = {}
+
+        self.initialized_hash = False
 
         self.opcode[self.hash_opcode(0x00, 0x00)] = self._0NNN
         self.opcode[self.hash_opcode(0x00, 0xE0)] = self._00E0
@@ -66,15 +68,9 @@ class Interpreter:
         self.opcode[self.hash_opcode(0xFF, 0x55)] = self._Fx55
         self.opcode[self.hash_opcode(0xFF, 0x65)] = self._Fx65
 
-        upper_byte = 0xFA
-        lower_byte = 0xD2
+        self.initialized_hash = True
 
-        x = upper_byte & 0b1111
-        y = lower_byte >> 4 & 0b1111
-        n = lower_byte & 0b1111
-        address = x << 8 | lower_byte
-
-        self.opcode[self.hash_opcode(0x00, 0x00)](x, y, n , address, lower_byte)
+        self.opcode[self.hash_opcode(0x82, 0xF4)](1, 2, 3, 4, 5)
 
         print(len(self.opcode))
 
@@ -94,8 +90,18 @@ class Interpreter:
             self.memory_buffer[0x200 + i*2] = (int(opcode[:2], 16))
             self.memory_buffer[0x200 + (i*2)+1] = (int(opcode[2:], 16))
 
+        #self.execute_instruction()
+
     def execute_instruction(self):
         """Executes the current instruction in the program counter register"""
+        upper_byte = self.memory_buffer[self.program_counter]
+        lower_byte = self.memory_buffer[self.program_counter + 0x001]
+        x = upper_byte & 0b1111
+        y = lower_byte >> 4 & 0b1111
+        n = lower_byte & 0b1111
+        address = x << 8 | lower_byte
+
+        self.opcode[self.hash_opcode(upper_byte, lower_byte)](x, y, n, address, lower_byte)
 
     def hash_opcode(self, upper_byte, lower_byte):
         """Gets an ID for a 2-byte opcode using the first and last 4-8 bits"""
@@ -103,10 +109,11 @@ class Interpreter:
         lower_bits = lower_byte & 0b1111
         # Concatenate the bits
         hash_value = upper_bits << 4 | lower_bits
-        if hash_value in self.opcode:
+        if not self.initialized_hash and hash_value in self.opcode:
             # Need to encode using entire lower byte
             hash_value = upper_bits << 8 | lower_byte
             # print("Collision at " + hex(upper_byte) + hex(lower_byte)[2:] + " " + str(hash_value))
+        print(hex(upper_byte) + hex(lower_byte)[2:] + ": " + str(hash_value))
         return hash_value
 
     def _0NNN(self, x, y, n, address, byte):
@@ -117,6 +124,7 @@ class Interpreter:
     def _00E0(self, x, y, n, address, byte):
         """Clear the display."""
         self.display.clear_screen()
+        self.program_counter += 0x001
         return
 
     def _00EE(self, x, y, n, address, byte):
@@ -125,7 +133,8 @@ class Interpreter:
         return
 
     def _1nnn(self, x, y, n, address, byte):
-        """Jump to location nnn. The interpreter sets the program counter to nnn."""
+        """Jump to location at address. The interpreter sets the program counter to address."""
+        self.program_counter = address
         return
 
     def _2nnn(self, x, y, n, address, byte):
@@ -134,26 +143,34 @@ class Interpreter:
         return
 
     def _3xkk(self, x, y, n, address, byte):
-        """Skip next instruction if Vx = kk. The interpreter compares register Vx to kk, and if they are equal,
+        """Skip next instruction if Vx = byte. The interpreter compares register Vx to byte, and if they are equal,
         increments the program counter by 2. """
+        if self.register_v[x] == byte:
+            self.program_counter += 0x002
         return
 
     def _4xkk(self, x, y, n, address, byte):
         """Skip next instruction if Vx != kk. The interpreter compares register Vx to kk, and if they are not equal,
         increments the program counter by 2. """
+        if self.register_v[x] != byte:
+            self.program_counter += 0x002
         return
 
     def _5xy0(self, x, y, n, address, byte):
         """Skip next instruction if Vx = Vy. The interpreter compares register Vx to register Vy, and if they are
         equal, increments the program counter by 2. """
+        if self.register_v[x] == self.register_v[y]:
+            self.program_counter += 0x002
         return
 
     def _6xkk(self, x, y, n, address, byte):
         """Set Vx = kk. The interpreter puts the value kk into register Vx."""
+        self.register_v[x] = byte
         return
 
     def _7xkk(self, x, y, n, address, byte):
         """Set Vx = Vx + kk. Adds the value kk to the value of register Vx, then stores the result in Vx."""
+        self.register_v[x] += byte
         return
 
     def _8xy0(self, x, y, n, address, byte):
@@ -163,21 +180,31 @@ class Interpreter:
 
     def _8xy1(self, x, y, n, address, byte):
         """Set Vx = Vx OR Vy. Performs a bitwise OR on the values of Vx and Vy, then stores the result in Vx."""
+        self.register_v[x] |= self.register_v[y]
         return
 
     def _8xy2(self, x, y, n, address, byte):
         """Set Vx = Vx AND Vy. Performs a bitwise AND on the values of Vx and Vy, then stores the result in Vx."""
+        self.register_v[x] &= self.register_v[y]
         return
 
     def _8xy3(self, x, y, n, address, byte):
         """Set Vx = Vx XOR Vy. Performs a bitwise exclusive OR on the values of Vx and Vy, then stores the result in
         Vx. """
+        self.register_v[x] ^= self.register_v[y]
         return
 
     def _8xy4(self, x, y, n, address, byte):
         """Set Vx = Vx + Vy, set VF = carry. The values of Vx and Vy are added together. If the result is greater
         than 8 bits (i.e., > 255,) VF is set to 1, otherwise 0. Only the lowest 8 bits of the result are kept,
         and stored in Vx. """
+        temp = self.register_v[x]
+        self.register_v[x] += self.register_v[y]
+        if temp > self.register_v[x]:
+            # There was an overflow
+            self.register_v[0xF] = 0x001
+        else:
+            self.register_v[0xF] = 0x000
         return
 
     def _8xy5(self, x, y, n, address, byte):
