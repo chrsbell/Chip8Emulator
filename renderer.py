@@ -23,7 +23,7 @@ class Renderer:
         self.window_width = 1024
         self.window_height = 576
 
-        self.max_fps = 60
+        self.max_fps = 144
 
         # Whether each pixel is on or off
         self.display_state = [[0 for y in range(self.height)] for x in range(self.width)]

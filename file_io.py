@@ -1,5 +1,5 @@
 from tkinter import filedialog
-
+import ntpath
 
 class FileIO:
     def __init__(self, interpreter):
@@ -8,9 +8,11 @@ class FileIO:
         return
 
     def open(self):
-        filename = filedialog.askopenfilename(title="Select a ROM")
+        self.filename = filedialog.askopenfilename(title="Select a ROM")
+        # Strip file string from path string
+        self.romname = ntpath.basename(self.filename)
         # Open in binary mode
-        with open(filename, 'rb') as file:
+        with open(self.filename, 'rb') as file:
             self.interpreter.load_program_to_memory(file)
             self.file_open = True
 

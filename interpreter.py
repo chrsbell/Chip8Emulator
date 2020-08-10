@@ -1,6 +1,6 @@
 import numpy as np
 from tkinter import messagebox
-
+import random
 
 # noinspection PyPep8Naming
 class Interpreter:
@@ -118,6 +118,15 @@ class Interpreter:
 
     def execute_instruction(self):
         """Executes the current instruction in the program counter register"""
+        # Update the timer registers at ~60hz
+        if self.register_d > 0:
+            self.register_d -= self.display.max_fps / 2
+            if self.register_d < 0:
+                self.register_d = 0
+        if self.register_s > 0:
+            self.register_s -= self.display.max_fps / 2
+            if self.register_s < 0:
+                self.register_s = 0
         upper_byte = self.memory_buffer[self.program_counter]
         lower_byte = self.memory_buffer[self.program_counter + 1]
         # print(hex(upper_byte) + hex(lower_byte)[2:])
@@ -312,7 +321,9 @@ class Interpreter:
     def _Cxkk(self, x, y, n, address, byte):
         """Set Vx = random byte AND kk. The interpreter generates a random number from 0 to 255, which is then ANDed
         with the value kk. The results are stored in Vx. """
-        return
+        random_byte = random.randint(0, 255)
+        self.register_v[x] = random_byte & byte
+        self.program_counter += 2
 
     def _Dxyn(self, x, y, n, address, byte):
         """Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision. The interpreter reads
@@ -342,11 +353,13 @@ class Interpreter:
     def _ExA1(self, x, y, n, address, byte):
         """Skip next instruction if key with the value of Vx is not pressed. Checks the keyboard, and if the key
         corresponding to the value of Vx is currently in the up position, PC is increased by 2. """
+        self.program_counter += 2
         return
 
     def _Fx07(self, x, y, n, address, byte):
         """Set Vx = delay timer value. The value of DT is placed into Vx."""
-        return
+        self.register_v[x] = self.register_d
+        self.program_counter += 2
 
     def _Fx0A(self, x, y, n, address, byte):
         """Wait for a key press, store the value of the key in Vx. All execution stops until a key is pressed,
