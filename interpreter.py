@@ -13,8 +13,9 @@ class Interpreter:
         self.register_v = np.array([0] * 0x10, np.ubyte)
         # 16-bit register for memory addresses
         self.register_i = np.int16(0x0)
-        # 8-bit register for delay/sound timers
-        self.register_s = np.byte(0x0)
+        # 8-bit registers for delay/sound timers
+        self.register_d = np.ubyte(0x0)
+        self.register_s = np.ubyte(0x0)
         # 16-bit program counter register which stores current address
         self.program_counter = 0x200
         # 8-bit pointer to top of stack
@@ -68,9 +69,33 @@ class Interpreter:
         self.opcode[self.hash_opcode(0xFF, 0x55)] = self._Fx55
         self.opcode[self.hash_opcode(0xFF, 0x65)] = self._Fx65
 
+        # Hex Sprites
+
+        # "0"
+        self.sprites = [0xF0, 0x90, 0x90, 0x90, 0xF0, #0
+                        0x20, 0x60, 0x20, 0x20, 0x70, #1
+                        0xF0, 0x10, 0xF0, 0x80, 0xF0, #2
+                        0xF0, 0x10, 0xF0, 0x10, 0xF0, #3
+                        0x90, 0x90, 0xF0, 0x10, 0x10, #4
+                        0xF0, 0x80, 0xF0, 0x10, 0xF0, #5
+                        0xF0, 0x80, 0xF0, 0x90, 0xF0, #6
+                        0xF0, 0x10, 0x20, 0x40, 0x40, #7
+                        0xF0, 0x90, 0xF0, 0x90, 0xF0, #8
+                        0xF0, 0x90, 0xF0, 0x10, 0xF0, #9
+                        0xF0, 0x90, 0xF0, 0x90, 0x90, #A
+                        0xE0, 0x90, 0xE0, 0x90, 0xE0, #B
+                        0xF0, 0x80, 0x80, 0x80, 0xF0, #C
+                        0xE0, 0x90, 0x90, 0x90, 0xE0, #D
+                        0xF0, 0x80, 0xF0, 0x80, 0xF0, #E
+                        0xF0, 0x80, 0xF0, 0x80, 0x80  #F
+                        ]
+
+        for i in range(len(self.sprites)):
+            self.memory_buffer[i] = self.sprites[i]
+
         self.initialized_hash = True
 
-        print(len(self.opcode))
+        assert(len(self.opcode) == 35)
 
     def load_program_to_memory(self, file):
         """Stores the program in the memory buffer"""
@@ -80,13 +105,12 @@ class Interpreter:
         if not len(program) % 4 == 0:
             messagebox.showerror("Invalid ROM", "That wasn't a Chip-8 ROM...")
             return
-
+        self.__init__(self.display)
+        self.display.clear_screen()
         # Store each individual opcode in 2 bytes of RAM starting at 0x200
         for i in range(int(len(program) / 4)):
             opcode = program[i*4:i*4+4]
             # Need to split opcode in half to fit in a byte
-            #print((int(opcode[:2], 16)))
-            #print((int(opcode[2:], 16)))
             self.memory_buffer[self.program_counter + i*2] = (int(opcode[:2], 16))
             self.memory_buffer[self.program_counter + (i*2)+1] = (int(opcode[2:], 16))
 
@@ -96,46 +120,55 @@ class Interpreter:
         """Executes the current instruction in the program counter register"""
         upper_byte = self.memory_buffer[self.program_counter]
         lower_byte = self.memory_buffer[self.program_counter + 1]
-        print(hex(upper_byte) + hex(lower_byte)[2:])
+        # print(hex(upper_byte) + hex(lower_byte)[2:])
         x = upper_byte & 0b1111
         y = lower_byte >> 4 & 0b1111
         n = lower_byte & 0b1111
         address = x << 8 | lower_byte
+        print("Current Opcode: ")
         hash_value =  self.hash_opcode(upper_byte, lower_byte)
         if not hash_value in self.opcode:
             messagebox.showerror("ROM Error", "Couldn't read ROM...")
         self.opcode[hash_value](x, y, n, address, lower_byte)
 
+
     def hash_opcode(self, upper_byte, lower_byte):
         """Gets an ID for a 2-byte opcode using the first and last 4-8 bits"""
         upper_bits = upper_byte >> 4 & 0b1111
-        hash_value = upper_bits
-        if not self.initialized_hash and hash_value in self.opcode:
-            # Try using lower bits
-            lower_bits = lower_byte & 0b1111
-            # Concatenate the bits
-            hash_value = upper_bits << 4 | lower_bits
-            if hash_value in self.opcode:
-                # Need to encode using entire lower byte
-                hash_value = upper_bits << 8 | lower_byte
-                # print("Collision at " + hex(upper_byte) + hex(lower_byte)[2:] + " " + str(hash_value))
+        lower_bits = lower_byte & 0b1111
+
+        if (upper_bits == 0xF or upper_bits == 0xE):
+            # Encode opcodes beginning with F or E
+            hash_value = upper_bits << 8 | lower_byte
+        elif (upper_bits == 0x0):
+            hash_value = lower_byte
+            if (self.initialized_hash and not hash_value in self.opcode):
+                # 'Call' opcode
+                hash_value = 0x00
+        elif (upper_bits == 0x08):
+            hash_value = upper_bits << 8 | lower_bits
+        else:
+            hash_value = upper_bits
+
         print(hex(upper_byte) + hex(lower_byte)[2:] + ": " + str(hash_value))
+
         return hash_value
 
     def _0NNN(self, x, y, n, address, byte):
         """Jump to a machine code routine at nnn. This instruction is only used on the old computers on which Chip-8
         was originally implemented. It is ignored by modern interpreters. """
-        return
+        self.program_counter += 2
 
     def _00E0(self, x, y, n, address, byte):
         """Clear the display."""
         self.display.clear_screen()
+        self.program_counter += 2
 
     def _00EE(self, x, y, n, address, byte):
         """Return from a subroutine. The interpreter sets the program counter to the address at the top of the stack,
         then subtracts 1 from the stack pointer. """
         self.stack_pointer -= 1
-        self.program_counter = self.stack[self.stack_pointer]
+        self.program_counter = self.stack[self.stack_pointer] + 2
 
     def _1nnn(self, x, y, n, address, byte):
         """Jump to location at address. The interpreter sets the program counter to address."""
@@ -153,18 +186,24 @@ class Interpreter:
         """Skip next instruction if Vx = byte. The interpreter compares register Vx to byte, and if they are equal,
         increments the program counter by 2. """
         if self.register_v[x] == byte:
+            self.program_counter += 4
+        else:
             self.program_counter += 2
 
     def _4xkk(self, x, y, n, address, byte):
         """Skip next instruction if Vx != kk. The interpreter compares register Vx to kk, and if they are not equal,
         increments the program counter by 2. """
         if self.register_v[x] != byte:
+            self.program_counter += 4
+        else:
             self.program_counter += 2
 
     def _5xy0(self, x, y, n, address, byte):
         """Skip next instruction if Vx = Vy. The interpreter compares register Vx to register Vy, and if they are
         equal, increments the program counter by 2. """
         if self.register_v[x] == self.register_v[y]:
+            self.program_counter += 4
+        else:
             self.program_counter += 2
 
     def _6xkk(self, x, y, n, address, byte):
@@ -175,23 +214,28 @@ class Interpreter:
     def _7xkk(self, x, y, n, address, byte):
         """Set Vx = Vx + kk. Adds the value kk to the value of register Vx, then stores the result in Vx."""
         self.register_v[x] += byte
+        self.program_counter += 2
 
     def _8xy0(self, x, y, n, address, byte):
         """Set Vx = Vy. Stores the value of register Vy in register Vx."""
         self.register_v[x] = self.register_v[y]
+        self.program_counter += 2
 
     def _8xy1(self, x, y, n, address, byte):
         """Set Vx = Vx OR Vy. Performs a bitwise OR on the values of Vx and Vy, then stores the result in Vx."""
         self.register_v[x] |= self.register_v[y]
+        self.program_counter += 2
 
     def _8xy2(self, x, y, n, address, byte):
         """Set Vx = Vx AND Vy. Performs a bitwise AND on the values of Vx and Vy, then stores the result in Vx."""
         self.register_v[x] &= self.register_v[y]
+        self.program_counter += 2
 
     def _8xy3(self, x, y, n, address, byte):
         """Set Vx = Vx XOR Vy. Performs a bitwise exclusive OR on the values of Vx and Vy, then stores the result in
         Vx. """
         self.register_v[x] ^= self.register_v[y]
+        self.program_counter += 2
 
     def _8xy4(self, x, y, n, address, byte):
         """Set Vx = Vx + Vy, set VF = carry. The values of Vx and Vy are added together. If the result is greater
@@ -204,6 +248,7 @@ class Interpreter:
             self.register_v[0xF] = 0x01
         else:
             self.register_v[0xF] = 0x00
+        self.program_counter += 2
 
     def _8xy5(self, x, y, n, address, byte):
         """Set Vx = Vx - Vy, set VF = NOT borrow. If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted
@@ -213,6 +258,7 @@ class Interpreter:
         else:
             self.register_v[0xF] = 0x00
         self.register_v[x] -= self.register_v[y]
+        self.program_counter += 2
 
     def _8xy6(self, x, y, n, address, byte):
         """Set Vx = Vx SHR 1. If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is
@@ -222,6 +268,7 @@ class Interpreter:
         else:
             self.register_v[0xF] = 0x00
         self.register_v[x] /= 2
+        self.program_counter += 2
 
     def _8xy7(self, x, y, n, address, byte):
         """Set Vx = Vy - Vx, set VF = NOT borrow. If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted
@@ -231,6 +278,7 @@ class Interpreter:
         else:
             self.register_v[0xF] = 0x00
         self.register_v[x] = self.register_v[y] - self.register_v[x]
+        self.program_counter += 2
 
     def _8xyE(self, x, y, n, address, byte):
         """Set Vx = Vx SHL 1. If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is
@@ -242,11 +290,14 @@ class Interpreter:
         else:
             self.register_v[0xF] = 0x00
         self.register_v[x] *= 2
+        self.program_counter += 2
 
     def _9xy0(self, x, y, n, address, byte):
         """Skip next instruction if Vx != Vy. The values of Vx and Vy are compared, and if they are not equal,
         the program counter is increased by 2. """
         if self.register_v[x] != self.register_v[y]:
+            self.program_counter += 4
+        else:
             self.program_counter += 2
 
     def _Annn(self, x, y, n, address, byte):
@@ -269,15 +320,13 @@ class Interpreter:
         at coordinates (Vx, Vy). Sprites are XORed onto the existing screen. If this causes any pixels to be erased,
         VF is set to 1, otherwise it is set to 0. If the sprite is positioned so part of it is outside the
         coordinates of the display, it wraps around to the opposite side of the screen. """
-        for j in range(n + 1):
+        for j in range(n):
             # Add padding to fit 8 bits
             sprite = format(self.memory_buffer[self.register_i + j], '#010b')[2:]
             print(sprite)
             for i in range(8):
-                #print(int(sprite[i]))
                 vx = (self.register_v[x] + i) % self.display.width
-                vy = (self.register_v[y] + j) % self.display.height
-                print(vx, vy)
+                vy = self.display.height - ((self.register_v[y] + j) % self.display.height) - 1
                 pixel_state = self.display.get_pixel(vx, vy)
                 if pixel_state and int(sprite[i]):
                     # There was a collision
@@ -306,20 +355,26 @@ class Interpreter:
 
     def _Fx15(self, x, y, n, address, byte):
         """Set delay timer = Vx. DT is set equal to the value of Vx."""
+        self.register_d = self.register_v[x]
+        self.program_counter += 2
         return
 
     def _Fx18(self, x, y, n, address, byte):
         """Set sound timer = Vx. ST is set equal to the value of Vx."""
+        self.register_s = self.register_v[x]
+        self.program_counter += 2
         return
 
     def _Fx1E(self, x, y, n, address, byte):
         """Set I = I + Vx. The values of I and Vx are added, and the results are stored in I."""
-        self.register_i += self.register_i[x]
+        self.register_i += self.register_v[x]
+        self.program_counter += 2
 
     def _Fx29(self, x, y, n, address, byte):
         """Set I = location of sprite for digit Vx. The value of I is set to the location for the hexadecimal sprite
         corresponding to the value of Vx. """
-        return
+        self.register_i = (x*5)
+        self.program_counter += 2
 
     def _Fx33(self, x, y, n, address, byte):
         """Store BCD representation of Vx in memory locations I, I+1, and I+2. The interpreter takes the decimal
@@ -329,14 +384,17 @@ class Interpreter:
         self.memory_buffer[self.register_i] = int(decimal / 100)
         self.memory_buffer[self.register_i + 1] = int((decimal % 100) / 10)
         self.memory_buffer[self.register_i + 2] = decimal % 10
+        self.program_counter += 2
 
     def _Fx55(self, x, y, n, address, byte):
         """Store registers V0 through Vx in memory starting at location I. The interpreter copies the values of
         registers V0 through Vx into memory, starting at the address in I. """
         for i in range(x + 1):
             self.memory_buffer[self.register_i + i] = self.register_v[i]
+        self.program_counter += 2
 
     def _Fx65(self, x, y, n, address, byte):
         """The interpreter reads values from memory starting at location I into registers V0 through Vx. """
         for i in range(x + 1):
             self.register_v[i] = self.memory_buffer[self.register_i + i]
+        self.program_counter += 2

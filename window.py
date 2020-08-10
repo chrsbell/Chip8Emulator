@@ -23,8 +23,8 @@ class Window:
         self.interpreter = Interpreter(self.display)
         self.file_io = FileIO(self.interpreter)
 
-        with open('roms/PONG', 'rb') as file:
-            self.interpreter.load_program_to_memory(file)
+        #with open('roms/PUZZLE', 'rb') as file:
+            #self.interpreter.load_program_to_memory(file)
 
         # Setup the window frame
         self.menu_bar = Menu(self.root)
@@ -84,7 +84,8 @@ class Window:
         for event in pygame.event.get():
             if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
                 return
-        self.interpreter.execute_instruction()
+        if self.file_io.file_open:
+            self.interpreter.execute_instruction()
         self.root.title("Chip-8 Emulator " + "~ FPS: " + str(int(self.clock.get_fps())))
         self.root.update_idletasks()
         self.root.update()

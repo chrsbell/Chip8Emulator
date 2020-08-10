@@ -150,8 +150,8 @@ class Renderer:
         self.display_state[x][y] = on
 
     def clear_screen(self):
-        for x in self.width:
-            for y in self.height:
+        for x in range(self.width):
+            for y in range(self.height):
                 self.set_pixel(x, y, 0)
 
     def render(self):

@@ -4,6 +4,7 @@ from tkinter import filedialog
 class FileIO:
     def __init__(self, interpreter):
         self.interpreter = interpreter
+        self.file_open = False
         return
 
     def open(self):
@@ -11,6 +12,7 @@ class FileIO:
         # Open in binary mode
         with open(filename, 'rb') as file:
             self.interpreter.load_program_to_memory(file)
+            self.file_open = True
 
     def save_state(self):
         """Save the interpreter state"""
