@@ -8,20 +8,20 @@ class Interpreter:
         """Chip-8 interpreter"""
 
         # Interpreter can access 4KB of RAM
-        self.memory_buffer = np.array([0] * 0x1000, np.ubyte)
+        self.memory_buffer = np.array([0] * 4096, np.ubyte)
         # 16 general purpose 8-bit registers
-        self.register_v = np.array([0] * 0x10, np.ubyte)
+        self.register_v = np.array([0] * 16, np.ubyte)
         # 16-bit register for memory addresses
-        self.register_i = np.int16(0x0)
+        self.register_i = np.int16(0)
         # 8-bit registers for delay/sound timers
-        self.register_d = np.ubyte(0x0)
-        self.register_s = np.ubyte(0x0)
+        self.register_d = np.ubyte(0)
+        self.register_s = np.ubyte(0)
         # 16-bit program counter register which stores current address
         self.program_counter = 0x200
         # 8-bit pointer to top of stack
-        self.stack_pointer = np.byte(0)
+        self.stack_pointer = np.ubyte(0)
         # 16 16-bit addresses which represent the call stack
-        self.stack = np.array([0x0] * 0x10, np.uint16)
+        self.stack = np.array([0] * 16, np.uint16)
         # Reference to external display
         self.display = display
 
@@ -101,10 +101,6 @@ class Interpreter:
         """Stores the program in the memory buffer"""
         file_bin = bytes(file.read())
         program = file_bin.hex()
-        # Each opcode must be 2 bytes long (4 characters)
-        if not len(program) % 4 == 0:
-            messagebox.showerror("Invalid ROM", "That wasn't a Chip-8 ROM...")
-            return
         self.__init__(self.display)
         self.display.clear_screen()
         # Store each individual opcode in 2 bytes of RAM starting at 0x200

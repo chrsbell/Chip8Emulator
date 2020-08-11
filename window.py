@@ -86,7 +86,7 @@ class Window:
                 return
         if self.file_io.file_open:
             self.interpreter.execute_instruction()
-        self.root.title("Chip-8 Emulator " + "~ FPS: " + str(int(self.clock.get_fps())))
+        self.root.title("Chip-8 Emulator " + "~ " + self.file_io.rom + " ~ FPS: " + str(int(self.clock.get_fps())))
         self.root.update_idletasks()
         self.root.update()
 
