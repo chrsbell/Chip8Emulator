@@ -1,96 +1,44 @@
-import pygame
 import os
 from tkinter import Menu, Tk, Toplevel, Button, Frame, messagebox
 from renderer import Renderer
-import contextlib
 from OpenGL.error import GLError
-from file_io import FileIO
-from interpreter import Interpreter
+from pyopengltk import OpenGLFrame
+import time
 
 
-class Window:
+class Window(OpenGLFrame):
 
-    def __init__(self):
-        """Uses a programmable pipeline PyOpenGL based PyGame window
-        embedded in a tkinter interface for file interaction"""
+    def initgl(self):
+        """Uses a programmable pipeline PyOpenGL based tkinter window"""
 
-        # Main window
-        self.root = Tk()
+        self.start = time.time()
+        self.nframes = 0
 
-        # OpenGL display
-        self.display = Renderer()
+        if self.display:
+            try:
+                # Compile the shader and create the vertex buffers
+                self.display.bind_shader()
+                self.display.create_vertex_objects()
+            except GLError as gl_error:
+                # Format and show an error
+                gl_error.format_description('description', gl_error.description)
+                messagebox.showerror("OpenGL Error: " + str(gl_error.err), error.description + str.encode(" at ") +
+                                     str.encode('%s' % gl_error.baseOperation.__name__))
+                self.close()
 
-        self.interpreter = Interpreter(self.display)
-        self.file_io = FileIO(self.interpreter)
-
-        #with open('roms/PUZZLE', 'rb') as file:
-            #self.interpreter.load_program_to_memory(file)
-
-        # Setup the window frame
-        self.menu_bar = Menu(self.root)
-        self.file_menu = Menu(self.menu_bar, tearoff=0)
-        self.file_menu.add_command(label="Open ROM", command=self.file_io.open)
-        self.file_menu.add_command(label="Save state", command=self.file_io.save_state)
-        self.file_menu.add_command(label="Load state", command=self.file_io.load_state())
-
-        self.file_menu.add_separator()
-
-        self.file_menu.add_command(label="Quit", command=self.close)
-        self.menu_bar.add_cascade(label="File", menu=self.file_menu)
-
-        self.root.config(menu=self.menu_bar)
-
-        embed = Frame(self.root, width=self.display.window_width, height=self.display.window_height)
-        embed.pack()
-
-        # Set the OS window ID for PyGame to use
-        os.environ['SDL_WINDOWID'] = str(embed.winfo_id())
-        self.root.update()
-        self.root.protocol("WM_DELETE_WINDOW", self.close)
-
-        # PyGame window wrapper for OpenGL display, used for keyboard input also
-        pygame.init()
-        pygame.display.set_mode((self.display.window_width, self.display.window_height),
-                                pygame.OPENGL | pygame.DOUBLEBUF)
-        self.clock = pygame.time.Clock()
-
-        self.error = False
-        self.quit = False
-
-    def show_opengl_error(self, error):
-        self.error = True
-        # Format and show an error
-        error.format_description('description', error.description)
-        messagebox.showerror("OpenGL Error: " + str(error.err), error.description + str.encode(" at ") +
-                             str.encode('%s' % error.baseOperation.__name__))
-
-    @contextlib.contextmanager
-    def init_opengl(self):
-        # Context manager handles deallocation of OpenGL resources when quitting
-        try:
-            # Compile the shader and create the vertex buffers
-            with self.display.bind_shader():
-                with self.display.create_vertex_objects():
-                    yield
-        except GLError as gl_error:
-            self.show_opengl_error(gl_error)
-            self.close()
-            yield
-
-    def update(self):
-        self.clock.tick(self.display.max_fps)
-        self.display.render()
-        pygame.display.flip()
-        for event in pygame.event.get():
-            if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
-                return
+    def redraw(self):
+        #self.clock.tick(1000)
         if self.file_io.file_open:
             self.interpreter.execute_instruction()
-        self.root.title("Chip-8 Emulator " + "~ " + self.file_io.rom + " ~ FPS: " + str(int(self.clock.get_fps())))
-        self.root.update_idletasks()
-        self.root.update()
+        tm = time.time() - self.start
+        self.nframes += 1
+        self.display.max_fps = self.nframes / tm
+        self.display.render()
+        #for event in pygame.event.get():
+        #    if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
+        #        return
+        #self.title("Chip-8 Emulator " + "~ " + self.file_io.rom + " ~ FPS: " + str(int(self.clock.get_fps())))
 
     def close(self):
-        pygame.quit()
-        self.root.quit()
-        self.quit = True
+        self.display.destroy()
+        self.tk.quit()

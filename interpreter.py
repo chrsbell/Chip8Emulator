@@ -116,11 +116,11 @@ class Interpreter:
         """Executes the current instruction in the program counter register"""
         # Update the timer registers at ~60hz
         if self.register_d > 0:
-            self.register_d -= self.display.max_fps / 2
+            self.register_d -= self.display.max_fps / 60
             if self.register_d < 0:
                 self.register_d = 0
         if self.register_s > 0:
-            self.register_s -= self.display.max_fps / 2
+            self.register_s -= self.display.max_fps / 60
             if self.register_s < 0:
                 self.register_s = 0
         upper_byte = self.memory_buffer[self.program_counter]
@@ -130,7 +130,7 @@ class Interpreter:
         y = lower_byte >> 4 & 0b1111
         n = lower_byte & 0b1111
         address = x << 8 | lower_byte
-        print("Current Opcode: ")
+        #print("Current Opcode: ")
         hash_value =  self.hash_opcode(upper_byte, lower_byte)
         if not hash_value in self.opcode:
             messagebox.showerror("ROM Error", "Couldn't read ROM...")
@@ -155,7 +155,7 @@ class Interpreter:
         else:
             hash_value = upper_bits
 
-        print(hex(upper_byte) + hex(lower_byte)[2:] + ": " + str(hash_value))
+        #print(hex(upper_byte) + hex(lower_byte)[2:] + ": " + str(hash_value))
 
         return hash_value
 
@@ -239,7 +239,7 @@ class Interpreter:
     def _8xy3(self, x, y, n, address, byte):
         """Set Vx = Vx XOR Vy. Performs a bitwise exclusive OR on the values of Vx and Vy, then stores the result in
         Vx. """
-        self.register_v[x] ^= self.register_v[y]
+        self.register_v[x] = self.register_v[x] ^ self.register_v[y]
         self.program_counter += 2
 
     def _8xy4(self, x, y, n, address, byte):
@@ -330,7 +330,7 @@ class Interpreter:
         for j in range(n):
             # Add padding to fit 8 bits
             sprite = format(self.memory_buffer[self.register_i + j], '#010b')[2:]
-            print(sprite)
+            #print(sprite)
             for i in range(8):
                 vx = (self.register_v[x] + i) % self.display.width
                 vy = self.display.height - ((self.register_v[y] + j) % self.display.height) - 1
