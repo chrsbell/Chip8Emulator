@@ -6,7 +6,7 @@ My attempt at an original Chip-8 Emulator using Python, currently developing. I 
 
  - [x] OpenGL 3.3 based using programmable pipeline
  - [x] Window based with GUI
- - [ ] Basic ROM support
+ - [x] Basic ROM support
  - [ ] Support for loading/saving states
  - [ ] Sound
  - [ ] Remappable keyboard input
