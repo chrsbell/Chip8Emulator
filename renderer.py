@@ -1,6 +1,5 @@
 import numpy as np
 import ctypes
-import contextlib
 import OpenGL
 # Manually show errors
 OpenGL.ERROR_LOGGING = False
@@ -18,10 +17,6 @@ class Renderer:
         # Chip-8 display
         self.width = 64
         self.height = 32
-
-        # Actual window size
-        self.window_width = 1024
-        self.window_height = 576
 
         self.max_fps = 120
 
@@ -77,13 +72,16 @@ class Renderer:
         GL.glUseProgram(self.shader)
 
     def destroy(self):
+        """Frees all of the allocated OpenGL resources"""
         # Unbind and delete VAO first, then VBOs
         GL.glBindVertexArray(0)
         GL.glDeleteVertexArrays(1, np.array([self.vertex_array_object]))
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
         GL.glDeleteBuffers(len(self.attributes), self.buffer_object)
+        # Remove attributes
         for attribute in self.attributes.values():
             GL.glDisableVertexAttribArray(attribute)
+        # Unbind shader
         GL.glUseProgram(0)
 
     def create_vertex_objects(self):

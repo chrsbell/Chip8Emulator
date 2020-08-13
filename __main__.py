@@ -1,25 +1,27 @@
 import tkinter
-from tkinter import Tk, Menu
 from window import Window
 from interpreter import Interpreter
 from renderer import Renderer
 from file_io import FileIO
-import os
 
 def main():
 
     root = tkinter.Tk()
-    window = Window(root, width=720, height=480)
+
     # OpenGL display
     display = Renderer()
+
+    # Chip-8 interpreter
     interpreter = Interpreter(display)
+
+    # File manager
     file_io = FileIO(interpreter)
-    window.display = display
-    window.file_io = file_io
-    window.interpreter = interpreter
+
+    window = Window(root, display, interpreter, file_io, width=720, height=480)
+
     # Setup the window frame
-    menu_bar = Menu(root)
-    file_menu = Menu(menu_bar, tearoff=0)
+    menu_bar = tkinter.Menu(root)
+    file_menu = tkinter.Menu(menu_bar, tearoff=0)
     file_menu.add_command(label="Open ROM", command=file_io.open)
     file_menu.add_command(label="Save state", command=file_io.save_state)
     file_menu.add_command(label="Load state", command=file_io.load_state())
@@ -33,7 +35,9 @@ def main():
 
     root.protocol("WM_DELETE_WINDOW", window.close)
     window.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-    window.animate = 1
+
+    # Approximate milliseconds between update calls
+    window.animate = int(1000 / display.max_fps)
     window.after(100, window.printContext)
     window.mainloop()
 

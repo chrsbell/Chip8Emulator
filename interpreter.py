@@ -2,6 +2,7 @@ import numpy as np
 from tkinter import messagebox
 import random
 
+
 # noinspection PyPep8Naming
 class Interpreter:
     def __init__(self, display):
@@ -109,8 +110,6 @@ class Interpreter:
             # Need to split opcode in half to fit in a byte
             self.memory_buffer[self.program_counter + i*2] = (int(opcode[:2], 16))
             self.memory_buffer[self.program_counter + (i*2)+1] = (int(opcode[2:], 16))
-
-        #self.execute_instruction()
 
     def execute_instruction(self):
         """Executes the current instruction in the program counter register"""
@@ -249,7 +248,7 @@ class Interpreter:
         temp = self.register_v[x]
         self.register_v[x] += self.register_v[y]
         if temp > self.register_v[x]:
-            # There was an overflow
+            # There was an overflow, which is OK
             self.register_v[0xF] = 0x01
         else:
             self.register_v[0xF] = 0x00
@@ -330,7 +329,6 @@ class Interpreter:
         for j in range(n):
             # Add padding to fit 8 bits
             sprite = format(self.memory_buffer[self.register_i + j], '#010b')[2:]
-            #print(sprite)
             for i in range(8):
                 vx = (self.register_v[x] + i) % self.display.width
                 vy = self.display.height - ((self.register_v[y] + j) % self.display.height) - 1
