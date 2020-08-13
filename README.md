@@ -27,13 +27,15 @@ Tkinter
 
     sudo apt install python3-tk
 
+pyopengltk
+
+```
+pip3 install pyopengltk
+```
+
 Numpy
 
     pip3 install numpy
-
-PyGame
-
-    python3 -m pip install -U pygame --user
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE0Mzc5NzkxMzQsLTE2OTE1NTc1MF19
+eyJoaXN0b3J5IjpbLTUzODIzMjM0OSwtMTY5MTU1NzUwXX0=
 -->
