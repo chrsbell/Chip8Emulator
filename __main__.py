@@ -9,6 +9,7 @@ from keymap import Keymap
 def main():
 
     root = tkinter.Tk()
+    root.resizable(False, False)
 
     # OpenGL display
     display = Renderer()
@@ -19,12 +20,15 @@ def main():
     # File manager
     file_io = FileIO(interpreter)
 
-    # Keymap
+    # Keymap/Input
     keymap = Keymap(root, interpreter)
+    root.bind('<Key>', keymap.process_key)
 
-    # Setup the window frame and file menu
+    # Setup the window frame
     window = Window(root, display, interpreter, file_io, keymap, width=720, height=480)
+    window.pack(fill=tkinter.BOTH, expand=False)
 
+    # Menu bar
     menu_bar = tkinter.Menu(root)
     file_menu = tkinter.Menu(menu_bar, tearoff=0)
     file_menu.add_command(label="Open ROM...", command=file_io.open)
@@ -40,7 +44,6 @@ def main():
     root.config(menu=menu_bar)
 
     root.protocol("WM_DELETE_WINDOW", window.close)
-    window.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
     # Approximate milliseconds between update calls
     window.animate = int(1000 / display.max_fps)
@@ -48,6 +51,7 @@ def main():
     if interpreter.debug:
         # Show GPU info
         window.after(100, window.printContext)
+
     window.mainloop()
 
 

@@ -1,4 +1,4 @@
-from tkinter import messagebox, Toplevel, Button
+from tkinter import messagebox, Toplevel, Button, PhotoImage
 from functools import partial
 
 
@@ -8,72 +8,74 @@ class Keymap:
         self.root = root
         self.interpreter = interpreter
         self.keymap_frame = None
-        # Whether window is open
+        self.width = 300
+        self.height = 300
+        # Whether keymap editor is open
         self.editing = False
         # Whether we are listening for keyboard input to map
         self.listening = False
-        # Hexadecimal keypad buttons mapped to keyboard characters
-        self.key = {'1': -1,
-                    '2': -1,
-                    '3': -1,
-                    '4': -1,
-                    '5': -1,
-                    '6': -1,
-                    '7': -1,
-                    '8': -1,
-                    '9': -1,
-                    'A': -1,
-                    'B': -1,
-                    'C': -1,
-                    'D': -1,
-                    'E': -1,
-                    'F': -1}
+        # The target hex value to map (0x0-0xF)
+        self.target_key = 0
+        # Keyboard input mapped to hex keypad
+        self.keyboard = {
+                    '0': 0x0,
+                    '1': 0x1,
+                    '2': 0x2,
+                    '3': 0x3,
+                    '4': 0x4,
+                    '5': 0x5,
+                    '6': 0x6,
+                    '7': 0x7,
+                    '8': 0x8,
+                    '9': 0x9,
+                    'a': 0xA,
+                    'b': 0xB,
+                    'c': 0xC,
+                    'd': 0xD,
+                    'e': 0xE,
+                    'f': 0xF}
+
+        # Inverse dictionary for removing old keys mapped to the target hex value
+        self.inverse_keyboard = {value: key for key, value in self.keyboard.items()}
+
+        # Current kex key that is down
+        self.key = 0
+        self.keydown = False
 
         # Dictionary of tk buttons
-        self.button = {'1': None,
-                       '2': None,
-                       '3': None,
-                       '4': None,
-                       '5': None,
-                       '6': None,
-                       '7': None,
-                       '8': None,
-                       '9': None,
-                       'A': None,
-                       'B': None,
-                       'C': None,
-                       'D': None,
-                       'E': None,
-                       'F': None}
+        self.button = {}
 
-    def add_button(self, hex, row, column):
-        self.button[hex] = Button(self.keymap_frame, text=hex, command=partial(self.add_listener, hex))
-        self.button[hex].grid(row=row, column=column)
+    def add_button(self, hex_value, row, column):
+        self.button[hex_value] = Button(master=self.keymap_frame, text=hex_value,
+                                        compound='c', command=partial(self.add_listener, hex_value))
+        self.button[hex_value].grid(row=row, column=column)
 
     def open_window(self):
         """Opens a new window for keymap editing"""
         self.editing = True
-        self.keymap_frame = Toplevel(self.root, width=400, height=400)
+        self.keymap_frame = Toplevel(self.root, width=self.width, height=self.height)
+        self.keymap_frame.title("Keyboard Settings")
         self.keymap_frame.protocol("WM_DELETE_WINDOW", self.close_window)
-        self.add_button('1', 0, 0)
-        self.add_button('2', 0, 1)
-        self.add_button('3', 0, 2)
-        self.add_button('C', 0, 3)
+        self.keymap_frame.bind('<Key>', self.add_key)
+        self.add_button(self.inverse_keyboard[0x1].upper(), 0, 0)
+        self.add_button(self.inverse_keyboard[0x2].upper(), 0, 1)
+        self.add_button(self.inverse_keyboard[0x3].upper(), 0, 2)
+        self.add_button(self.inverse_keyboard[0xC].upper(), 0, 3)
 
-        self.add_button('4', 1, 0)
-        self.add_button('5', 1, 1)
-        self.add_button('6', 1, 2)
-        self.add_button('D', 1, 3)
+        self.add_button(self.inverse_keyboard[0x4].upper(), 1, 0)
+        self.add_button(self.inverse_keyboard[0x5].upper(), 1, 1)
+        self.add_button(self.inverse_keyboard[0x6].upper(), 1, 2)
+        self.add_button(self.inverse_keyboard[0xD].upper(), 1, 3)
 
-        self.add_button('7', 2, 0)
-        self.add_button('8', 2, 1)
-        self.add_button('9', 2, 2)
-        self.add_button('E', 2, 3)
+        self.add_button(self.inverse_keyboard[0x7].upper(), 2, 0)
+        self.add_button(self.inverse_keyboard[0x8].upper(), 2, 1)
+        self.add_button(self.inverse_keyboard[0x9].upper(), 2, 2)
+        self.add_button(self.inverse_keyboard[0xE].upper(), 2, 3)
 
-        self.add_button('A', 3, 0)
-        self.add_button('0', 3, 1)
-        self.add_button('B', 3, 2)
-        self.add_button('F', 3, 3)
+        self.add_button(self.inverse_keyboard[0xA].upper(), 3, 0)
+        self.add_button(self.inverse_keyboard[0x0].upper(), 3, 1)
+        self.add_button(self.inverse_keyboard[0xB].upper(), 3, 2)
+        self.add_button(self.inverse_keyboard[0xF].upper(), 3, 3)
 
 
     def save_keymap(self):
@@ -86,13 +88,31 @@ class Keymap:
 
     def close_window(self):
         self.editing = False
+        self.listening = False
+        self.target_key = 0
         self.keymap_frame.destroy()
 
-    def add_listener(self, hex):
-        print(hex)
-        print(self.button[hex])
+    def add_listener(self, hex_value):
+        self.target_key = int(hex_value, 16)
         self.listening = True
 
-    def add_key(self, button, key):
+    def process_key(self, event):
+        if event.char in self.keyboard:
+            if self.interpreter.debug:
+                print('Hex key pressed: ', self.keyboard[event.char])
+            self.key = self.keyboard[event.char]
+            self.keydown = True
+
+    def add_key(self, event):
         """Adds a key to the keymap"""
-        self.key[button] = key
+        if self.listening:
+            # Remove the old entry
+            del self.keyboard[self.inverse_keyboard[self.target_key]]
+            # Update both dictionaries
+            self.inverse_keyboard[self.target_key] = event.char
+            self.keyboard[event.char] = self.target_key
+            # Update button text
+            self.button[str(hex(self.target_key)[2]).upper()]['text'] = event.char.upper()
+            if self.interpreter.debug:
+                print('Added key mapping: ' + repr(event.char) + ' to ' + hex(self.target_key))
+            self.listening = False
