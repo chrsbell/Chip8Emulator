@@ -7,10 +7,9 @@ My attempt at an original Chip-8 Emulator using Python, currently developing. I 
  - [x] OpenGL 3.3 based using programmable pipeline
  - [x] Window based with GUI
  - [x] Basic ROM support
- - [ ] Support for loading/saving states
- - [ ] Sound
  - [ ] Remappable keyboard input
-
+ - [ ] Sound
+ - [ ] Support for loading/saving states
 ## Dependencies
 
 The emulator should run on any system with the following dependencies:
@@ -29,11 +28,9 @@ Tkinter
 
 pyopengltk
 
-```
-pip3 install pyopengltk
-```
+    pip3 install pyopengltk
 
-Numpy
+NumPy
 
     pip3 install numpy
 <!--stackedit_data:

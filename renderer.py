@@ -18,6 +18,7 @@ class Renderer:
         self.width = 64
         self.height = 32
 
+        # Should be a multiple of 60 for proper timer operation
         self.max_fps = 120
 
         # Whether each pixel is on or off

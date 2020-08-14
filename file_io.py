@@ -1,5 +1,6 @@
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 import ntpath
+
 
 class FileIO:
     def __init__(self, interpreter):
@@ -21,6 +22,9 @@ class FileIO:
                 self.interpreter.load_program_to_memory(file)
                 self.file_open = True
         except IOError as error:
+            if self.interpreter.debug:
+                print(error)
+            messagebox.showerror("ROM Error", "Couldn't open file")
             self.file_open = False
 
     def save_state(self):

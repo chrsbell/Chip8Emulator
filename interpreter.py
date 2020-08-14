@@ -26,6 +26,12 @@ class Interpreter:
         # Reference to external display
         self.display = display
 
+        # Error handling
+        self.error = False
+
+        # Debug mode
+        self.debug = True
+
         # Using a dictionary to look up which function to use for any opcode
         # https://en.wikipedia.org/wiki/CHIP-8
         # Most of the descriptions are taken directly from http://devernay.free.fr/hacks/chip8/C8TECH10.HTM#3.1
@@ -73,22 +79,22 @@ class Interpreter:
         # Hex Sprites
 
         # "0"
-        self.sprites = [0xF0, 0x90, 0x90, 0x90, 0xF0, #0
-                        0x20, 0x60, 0x20, 0x20, 0x70, #1
-                        0xF0, 0x10, 0xF0, 0x80, 0xF0, #2
-                        0xF0, 0x10, 0xF0, 0x10, 0xF0, #3
-                        0x90, 0x90, 0xF0, 0x10, 0x10, #4
-                        0xF0, 0x80, 0xF0, 0x10, 0xF0, #5
-                        0xF0, 0x80, 0xF0, 0x90, 0xF0, #6
-                        0xF0, 0x10, 0x20, 0x40, 0x40, #7
-                        0xF0, 0x90, 0xF0, 0x90, 0xF0, #8
-                        0xF0, 0x90, 0xF0, 0x10, 0xF0, #9
-                        0xF0, 0x90, 0xF0, 0x90, 0x90, #A
-                        0xE0, 0x90, 0xE0, 0x90, 0xE0, #B
-                        0xF0, 0x80, 0x80, 0x80, 0xF0, #C
-                        0xE0, 0x90, 0x90, 0x90, 0xE0, #D
-                        0xF0, 0x80, 0xF0, 0x80, 0xF0, #E
-                        0xF0, 0x80, 0xF0, 0x80, 0x80  #F
+        self.sprites = [0xF0, 0x90, 0x90, 0x90, 0xF0,  # 0
+                        0x20, 0x60, 0x20, 0x20, 0x70,  # 1
+                        0xF0, 0x10, 0xF0, 0x80, 0xF0,  # 2
+                        0xF0, 0x10, 0xF0, 0x10, 0xF0,  # 3
+                        0x90, 0x90, 0xF0, 0x10, 0x10,  # 4
+                        0xF0, 0x80, 0xF0, 0x10, 0xF0,  # 5
+                        0xF0, 0x80, 0xF0, 0x90, 0xF0,  # 6
+                        0xF0, 0x10, 0x20, 0x40, 0x40,  # 7
+                        0xF0, 0x90, 0xF0, 0x90, 0xF0,  # 8
+                        0xF0, 0x90, 0xF0, 0x10, 0xF0,  # 9
+                        0xF0, 0x90, 0xF0, 0x90, 0x90,  # A
+                        0xE0, 0x90, 0xE0, 0x90, 0xE0,  # B
+                        0xF0, 0x80, 0x80, 0x80, 0xF0,  # C
+                        0xE0, 0x90, 0x90, 0x90, 0xE0,  # D
+                        0xF0, 0x80, 0xF0, 0x80, 0xF0,  # E
+                        0xF0, 0x80, 0xF0, 0x80, 0x80   # F
                         ]
 
         for i in range(len(self.sprites)):
@@ -96,7 +102,8 @@ class Interpreter:
 
         self.initialized_hash = True
 
-        assert(len(self.opcode) == 35)
+        if self.debug:
+            assert(len(self.opcode) == 35)
 
     def load_program_to_memory(self, file):
         """Stores the program in the memory buffer"""
@@ -104,57 +111,66 @@ class Interpreter:
         program = file_bin.hex()
         self.__init__(self.display)
         self.display.clear_screen()
+        # Make sure program isn't too large
+        if int(len(program) / 2 > (4096 - 0x200)):
+            messagebox.showerror("ROM Error", "ROM size is too large!")
+            self.error = True
+            return
         # Store each individual opcode in 2 bytes of RAM starting at 0x200
         for i in range(int(len(program) / 4)):
             opcode = program[i*4:i*4+4]
             # Need to split opcode in half to fit in a byte
             self.memory_buffer[self.program_counter + i*2] = (int(opcode[:2], 16))
             self.memory_buffer[self.program_counter + (i*2)+1] = (int(opcode[2:], 16))
+        # Successfully loaded ROM
+        self.error = False
 
     def execute_instruction(self):
         """Executes the current instruction in the program counter register"""
         # Update the timer registers at ~60hz
         if self.register_d > 0:
-            self.register_d -= self.display.max_fps / 60
+            self.register_d -= int(self.display.max_fps / 60)
             if self.register_d < 0:
                 self.register_d = 0
         if self.register_s > 0:
-            self.register_s -= self.display.max_fps / 60
+            self.register_s -= int(self.display.max_fps / 60)
             if self.register_s < 0:
                 self.register_s = 0
         upper_byte = self.memory_buffer[self.program_counter]
         lower_byte = self.memory_buffer[self.program_counter + 1]
-        # print(hex(upper_byte) + hex(lower_byte)[2:])
         x = upper_byte & 0b1111
         y = lower_byte >> 4 & 0b1111
         n = lower_byte & 0b1111
         address = x << 8 | lower_byte
-        #print("Current Opcode: ")
-        hash_value =  self.hash_opcode(upper_byte, lower_byte)
-        if not hash_value in self.opcode:
+        if self.debug:
+            print("Current Opcode: ")
+        hash_value = self.hash_opcode(upper_byte, lower_byte)
+        if hash_value not in self.opcode:
             messagebox.showerror("ROM Error", "Couldn't read ROM...")
+            self.error = True
+            return
         self.opcode[hash_value](x, y, n, address, lower_byte)
-
 
     def hash_opcode(self, upper_byte, lower_byte):
         """Gets an ID for a 2-byte opcode using the first and last 4-8 bits"""
         upper_bits = upper_byte >> 4 & 0b1111
         lower_bits = lower_byte & 0b1111
 
-        if (upper_bits == 0xF or upper_bits == 0xE):
+        if upper_bits == 0xF or upper_bits == 0xE:
             # Encode opcodes beginning with F or E
             hash_value = upper_bits << 8 | lower_byte
-        elif (upper_bits == 0x0):
+        elif upper_bits == 0x0:
             hash_value = lower_byte
-            if (self.initialized_hash and not hash_value in self.opcode):
+            if self.initialized_hash and hash_value not in self.opcode:
                 # 'Call' opcode
                 hash_value = 0x00
-        elif (upper_bits == 0x08):
+        elif upper_bits == 0x08:
             hash_value = upper_bits << 8 | lower_bits
         else:
             hash_value = upper_bits
 
-        #print(hex(upper_byte) + hex(lower_byte)[2:] + ": " + str(hash_value))
+        if self.debug:
+            print(hex(upper_byte) + hex(lower_byte)[2:] + ": " + str(hash_value))
 
         return hash_value
 

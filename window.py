@@ -1,7 +1,8 @@
-from tkinter import Menu, Tk, Toplevel, Button, Frame, messagebox
+from tkinter import messagebox
 from OpenGL.error import GLError
 from pyopengltk import OpenGLFrame
 import time
+
 
 class Window(OpenGLFrame):
 
@@ -33,25 +34,17 @@ class Window(OpenGLFrame):
                                  str.encode('%s' % gl_error.baseOperation.__name__))
             self.close()
 
-    def _display(self):
-        """Inherited method, reimplementing to accurately measure FPS"""
-        self.tkMakeCurrent()
-
-        if self.file_io.file_open:
+    def redraw(self):
+        if self.file_io.file_open and not self.interpreter.error:
             self.interpreter.execute_instruction()
 
         self.display.render()
-
-        self.tkSwapBuffers()
 
         # Update the FPS
         end = time.time()
         self.delta = end - self.start
         self.start = end
         self.master.title("Chip-8 Emulator " + "~ " + self.file_io.rom + " ~ FPS: " + str(int(1.0 / self.delta)))
-
-        if self.animate > 0:
-            self.cb = self.after(self.animate, self._display)
 
     def close(self):
         self.display.destroy()
