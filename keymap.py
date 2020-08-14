@@ -3,10 +3,9 @@ from functools import partial
 
 
 class Keymap:
-    def __init__(self, root, interpreter):
+    def __init__(self, root):
         """Represents the Chip-8 hexadecimal keypad"""
         self.root = root
-        self.interpreter = interpreter
         self.keymap_frame = None
         self.width = 300
         self.height = 300
@@ -38,7 +37,7 @@ class Keymap:
         # Inverse dictionary for removing old keys mapped to the target hex value
         self.inverse_keyboard = {value: key for key, value in self.keyboard.items()}
 
-        # Current kex key that is down
+        # Current hex key that is down
         self.key = 0
         self.keydown = False
 
@@ -96,12 +95,14 @@ class Keymap:
         self.target_key = int(hex_value, 16)
         self.listening = True
 
-    def process_key(self, event):
+    def process_keypress(self, event):
         if event.char in self.keyboard:
-            if self.interpreter.debug:
-                print('Hex key pressed: ', self.keyboard[event.char])
+            print('Hex key pressed: ', self.keyboard[event.char])
             self.key = self.keyboard[event.char]
             self.keydown = True
+
+    def process_keyrelease(self, event):
+        self.keydown = False
 
     def add_key(self, event):
         """Adds a key to the keymap"""
@@ -113,6 +114,5 @@ class Keymap:
             self.keyboard[event.char] = self.target_key
             # Update button text
             self.button[str(hex(self.target_key)[2]).upper()]['text'] = event.char.upper()
-            if self.interpreter.debug:
-                print('Added key mapping: ' + repr(event.char) + ' to ' + hex(self.target_key))
+            print('Added key mapping: ' + repr(event.char) + ' to ' + hex(self.target_key))
             self.listening = False

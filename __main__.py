@@ -14,15 +14,16 @@ def main():
     # OpenGL display
     display = Renderer()
 
+    # Keymap/Input
+    keymap = Keymap(root)
+    root.bind('<KeyPress>', keymap.process_keypress)
+    root.bind('<KeyRelease>', keymap.process_keyrelease)
+
     # Chip-8 interpreter
-    interpreter = Interpreter(display)
+    interpreter = Interpreter(display, keymap)
 
     # File manager
     file_io = FileIO(interpreter)
-
-    # Keymap/Input
-    keymap = Keymap(root, interpreter)
-    root.bind('<Key>', keymap.process_key)
 
     # Setup the window frame
     window = Window(root, display, interpreter, file_io, keymap, width=720, height=480)

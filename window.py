@@ -38,7 +38,14 @@ class Window(OpenGLFrame):
 
     def redraw(self):
         if self.file_io.file_open and not self.interpreter.error:
-            self.interpreter.execute_instruction()
+            if not self.interpreter.wait_for_key:
+                self.interpreter.execute_instruction()
+            elif self.keymap.keydown:
+                # Continue execution from opcode Fx0A
+                x = self.interpreter.x
+                self.interpreter.wait_for_key = False
+                self.interpreter.register_v[x] = self.keymap.key
+                self.interpreter.program_counter += 2
 
         self.display.render()
 

@@ -5,7 +5,7 @@ import random
 
 # noinspection PyPep8Naming
 class Interpreter:
-    def __init__(self, display):
+    def __init__(self, display, keyboard):
         """Chip-8 interpreter"""
 
         # Interpreter can access 4KB of RAM
@@ -25,6 +25,12 @@ class Interpreter:
         self.stack = np.array([0] * 16, np.uint16)
         # Reference to external display
         self.display = display
+        # Reference to keymap
+        self.keyboard = keyboard
+
+        # Used for Fx0A
+        self.wait_for_key = False
+        self.x = 0
 
         # Error handling
         self.error = False
@@ -76,6 +82,8 @@ class Interpreter:
         self.opcode[self.hash_opcode(0xFF, 0x55)] = self._Fx55
         self.opcode[self.hash_opcode(0xFF, 0x65)] = self._Fx65
 
+        self.initialized_hash = True
+
         # Hex Sprites
 
         # "0"
@@ -100,8 +108,6 @@ class Interpreter:
         for i in range(len(self.sprites)):
             self.memory_buffer[i] = self.sprites[i]
 
-        self.initialized_hash = True
-
         if self.debug:
             assert(len(self.opcode) == 35)
 
@@ -109,7 +115,7 @@ class Interpreter:
         """Stores the program in the memory buffer"""
         file_bin = bytes(file.read())
         program = file_bin.hex()
-        self.__init__(self.display)
+        self.__init__(self.display, self.keyboard)
         self.display.clear_screen()
         # Make sure program isn't too large
         if int(len(program) / 2 > (4096 - 0x200)):
@@ -358,12 +364,20 @@ class Interpreter:
     def _Ex9E(self, x, y, n, address, byte):
         """Skip next instruction if key with the value of Vx is pressed. Checks the keyboard, and if the key
         corresponding to the value of Vx is currently in the down position, PC is increased by 2. """
+        if self.keyboard.keydown and self.keyboard.key == self.register_v[x]:
+            self.program_counter += 4
+        else:
+            self.program_counter += 2
         return
 
     def _ExA1(self, x, y, n, address, byte):
         """Skip next instruction if key with the value of Vx is not pressed. Checks the keyboard, and if the key
         corresponding to the value of Vx is currently in the up position, PC is increased by 2. """
-        self.program_counter += 2
+        # Check if key pressed doesn't match or there is no key pressed
+        if (self.keyboard.keydown and self.keyboard.key != self.register_v[x]) or not self.keyboard.keydown:
+            self.program_counter += 4
+        else:
+            self.program_counter += 2
         return
 
     def _Fx07(self, x, y, n, address, byte):
@@ -374,6 +388,8 @@ class Interpreter:
     def _Fx0A(self, x, y, n, address, byte):
         """Wait for a key press, store the value of the key in Vx. All execution stops until a key is pressed,
         then the value of that key is stored in Vx. """
+        self.wait_for_key = True
+        self.x = x
         return
 
     def _Fx15(self, x, y, n, address, byte):
