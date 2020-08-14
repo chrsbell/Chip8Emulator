@@ -3,6 +3,7 @@ from window import Window
 from interpreter import Interpreter
 from renderer import Renderer
 from file_io import FileIO
+from keymap import Keymap
 
 
 def main():
@@ -18,15 +19,18 @@ def main():
     # File manager
     file_io = FileIO(interpreter)
 
+    # Keymap
+    keymap = Keymap(root, interpreter)
+
     # Setup the window frame and file menu
-    window = Window(root, display, interpreter, file_io, width=720, height=480)
+    window = Window(root, display, interpreter, file_io, keymap, width=720, height=480)
 
     menu_bar = tkinter.Menu(root)
     file_menu = tkinter.Menu(menu_bar, tearoff=0)
-    file_menu.add_command(label="Open ROM", command=file_io.open)
-    file_menu.add_command(label="Save state", command=file_io.save_state)
-    file_menu.add_command(label="Load state", command=file_io.load_state())
-    # file_menu.add_command(label="Keyboard settings", command=window.)
+    file_menu.add_command(label="Open ROM...", command=file_io.open)
+    file_menu.add_command(label="Save state...", command=file_io.save_state)
+    file_menu.add_command(label="Load state...", command=file_io.load_state)
+    file_menu.add_command(label="Keyboard settings...", command=keymap.open_window)
 
     file_menu.add_separator()
 

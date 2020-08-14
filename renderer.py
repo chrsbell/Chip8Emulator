@@ -1,6 +1,8 @@
 import numpy as np
 import ctypes
 import OpenGL
+# Disable error checking for a speed increase
+# OpenGL.ERROR_CHECKING = False
 # Manually show errors
 OpenGL.ERROR_LOGGING = False
 # Ensure we use numpy arrays instead of lists to prevent copying data

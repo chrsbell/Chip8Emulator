@@ -4,6 +4,7 @@ import ntpath
 
 class FileIO:
     def __init__(self, interpreter):
+        """Class for handling reading/writing to files"""
         self.interpreter = interpreter
         self.file_open = False
         self.rom = ''

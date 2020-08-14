@@ -6,8 +6,9 @@ import time
 
 class Window(OpenGLFrame):
 
-    def __init__(self, master=None, display=0, interpreter=0, file_io=0, cnf={}, **kw):
-        """Inherits from BaseOpenGLFrame"""
+    def __init__(self, master=None, display=0, interpreter=0, file_io=0, keymap=0, cnf={}, **kw):
+        """The main tkinter window"""
+        # Inherits from BaseOpenGLFrame
         super().__init__(master, cnf, **kw)
         # Actual window size
         self.window_width = kw['width']
@@ -20,6 +21,7 @@ class Window(OpenGLFrame):
         self.display = display
         self.interpreter = interpreter
         self.file_io = file_io
+        self.keymap = keymap
 
     def initgl(self):
         """Uses a programmable pipeline PyOpenGL based tkinter window"""
