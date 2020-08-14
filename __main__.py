@@ -4,7 +4,7 @@ from interpreter import Interpreter
 from renderer import Renderer
 from file_io import FileIO
 from keymap import Keymap
-
+from audio import AudioSynthesizer
 
 def main():
 
@@ -19,14 +19,19 @@ def main():
     root.bind('<KeyPress>', keymap.process_keypress)
     root.bind('<KeyRelease>', keymap.process_keyrelease)
 
+    # Audio synthesizer
+    audio = AudioSynthesizer()
+    audio.play_square_wave(5)
     # Chip-8 interpreter
-    interpreter = Interpreter(display, keymap)
+    interpreter = Interpreter(display, keymap, audio)
 
     # File manager
     file_io = FileIO(interpreter)
 
-    # Setup the window frame
-    window = Window(root, display, interpreter, file_io, keymap, width=720, height=480)
+    # Setup the main window frame
+    window = Window(root, display, interpreter, file_io, keymap, audio, width=720, height=480)
+    # Approximate milliseconds between update calls
+    window.animate = int(1000 / display.max_fps)
     window.pack(fill=tkinter.BOTH, expand=False)
 
     # Menu bar
@@ -45,9 +50,6 @@ def main():
     root.config(menu=menu_bar)
 
     root.protocol("WM_DELETE_WINDOW", window.close)
-
-    # Approximate milliseconds between update calls
-    window.animate = int(1000 / display.max_fps)
 
     if interpreter.debug:
         # Show GPU info

@@ -6,7 +6,7 @@ import time
 
 class Window(OpenGLFrame):
 
-    def __init__(self, master=None, display=0, interpreter=0, file_io=0, keymap=0, cnf={}, **kw):
+    def __init__(self, master=None, display=0, interpreter=0, file_io=0, keymap=0, audio=0, cnf={}, **kw):
         """The main tkinter window"""
         # Inherits from BaseOpenGLFrame
         super().__init__(master, cnf, **kw)
@@ -22,11 +22,11 @@ class Window(OpenGLFrame):
         self.interpreter = interpreter
         self.file_io = file_io
         self.keymap = keymap
+        self.audio = audio
 
     def initgl(self):
-        """Uses a programmable pipeline PyOpenGL based tkinter window"""
+        """Compile the shaders and creates the vertex buffers"""
         try:
-            # Compile the shader and create the vertex buffers
             self.display.bind_shader()
             self.display.create_vertex_objects()
         except GLError as gl_error:
@@ -37,7 +37,9 @@ class Window(OpenGLFrame):
             self.close()
 
     def redraw(self):
+        """Main execution loop"""
         if self.file_io.file_open and not self.interpreter.error:
+            # Check if executing Fx0A
             if not self.interpreter.wait_for_key:
                 self.interpreter.execute_instruction()
             elif self.keymap.keydown:

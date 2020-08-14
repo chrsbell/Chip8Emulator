@@ -60,12 +60,6 @@ class Renderer:
         }
         """
 
-    def add_attributes(self, attributes):
-        """Gets location of each string attribute in the shader and enables it"""
-        for attribute in attributes:
-            self.attributes[attribute] = GL.glGetAttribLocation(self.shader, attribute)
-            GL.glEnableVertexAttribArray(self.attributes[attribute])
-
     def bind_shader(self):
         """Compiles and binds the shader program"""
         self.shader = OpenGL.GL.shaders.compileProgram(
@@ -96,7 +90,10 @@ class Renderer:
         GL.glBindVertexArray(self.vertex_array_object)
         # Generate VBOs for each of the shader attributes
         self.buffer_object = GL.glGenBuffers(len(attribute_names))
-        self.add_attributes(attribute_names)
+        # Enable the attributes
+        for attribute in attribute_names:
+            self.attributes[attribute] = GL.glGetAttribLocation(self.shader, attribute)
+            GL.glEnableVertexAttribArray(self.attributes[attribute])
         # Bind the position buffer and describe/send its data
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self.buffer_object[0])
         GL.glVertexAttribPointer(self.attributes['position'], 2, GL.GL_FLOAT, False, 0,

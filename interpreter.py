@@ -5,7 +5,7 @@ import random
 
 # noinspection PyPep8Naming
 class Interpreter:
-    def __init__(self, display, keyboard):
+    def __init__(self, display, keyboard, audio):
         """Chip-8 interpreter"""
 
         # Interpreter can access 4KB of RAM
@@ -27,6 +27,8 @@ class Interpreter:
         self.display = display
         # Reference to keymap
         self.keyboard = keyboard
+        # Reference to audio synthesizer
+        self.audio = audio
 
         # Used for Fx0A
         self.wait_for_key = False
