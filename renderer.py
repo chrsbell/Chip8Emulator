@@ -21,7 +21,7 @@ class Renderer:
         self.height = 32
 
         # Should be a multiple of 60 for proper timer operation
-        self.max_fps = 120
+        self.max_fps = 60
 
         # Whether each pixel is on or off
         self.display_state = [[0 for y in range(self.height)] for x in range(self.width)]

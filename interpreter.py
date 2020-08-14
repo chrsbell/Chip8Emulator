@@ -8,6 +8,9 @@ class Interpreter:
     def __init__(self, display, keyboard, audio):
         """Chip-8 interpreter"""
 
+        # Number of instructions to execute per render call
+        self.num_cycles = 10
+
         # Interpreter can access 4KB of RAM
         self.memory_buffer = np.array([0] * 4096, np.ubyte)
         # 16 general purpose 8-bit registers
@@ -117,7 +120,7 @@ class Interpreter:
         """Stores the program in the memory buffer"""
         file_bin = bytes(file.read())
         program = file_bin.hex()
-        self.__init__(self.display, self.keyboard)
+        self.__init__(self.display, self.keyboard, self.audio)
         self.display.clear_screen()
         # Make sure program isn't too large
         if int(len(program) / 2 > (4096 - 0x200)):
@@ -403,6 +406,9 @@ class Interpreter:
     def _Fx18(self, x, y, n, address, byte):
         """Set sound timer = Vx. ST is set equal to the value of Vx."""
         self.register_s = self.register_v[x]
+        if self.debug:
+            print("Playing audio of duration: ", self.register_s / 60.0)
+        self.audio.play_square_wave(self.register_s / 60.0)
         self.program_counter += 2
         return
 

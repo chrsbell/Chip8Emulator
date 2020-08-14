@@ -41,7 +41,8 @@ class Window(OpenGLFrame):
         if self.file_io.file_open and not self.interpreter.error:
             # Check if executing Fx0A
             if not self.interpreter.wait_for_key:
-                self.interpreter.execute_instruction()
+                for i in range(self.interpreter.num_cycles):
+                    self.interpreter.execute_instruction()
             elif self.keymap.keydown:
                 # Continue execution from opcode Fx0A
                 x = self.interpreter.x
