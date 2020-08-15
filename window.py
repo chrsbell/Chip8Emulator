@@ -2,6 +2,8 @@ from tkinter import messagebox
 from OpenGL.error import GLError
 from pyopengltk import OpenGLFrame
 import time
+import os
+import platform
 
 
 class Window(OpenGLFrame):
@@ -23,6 +25,9 @@ class Window(OpenGLFrame):
         self.file_io = file_io
         self.keymap = keymap
         self.audio = audio
+
+        if platform.system() == 'Linux':
+            os.system('xset r off')
 
     def initgl(self):
         """Compile the shaders and creates the vertex buffers"""
@@ -59,5 +64,7 @@ class Window(OpenGLFrame):
         self.master.title("Chip-8 Emulator " + "~ " + self.file_io.rom + " ~ FPS: " + str(int(1.0 / self.delta)))
 
     def close(self):
+        if platform.system() == 'Linux':
+            os.system('xset r on')
         self.display.destroy()
         self.tk.quit()
