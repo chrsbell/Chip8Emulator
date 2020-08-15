@@ -41,10 +41,14 @@ class Renderer:
 
         in vec2 position;
         in int pixel_state;
-        flat out int color; //don't interpolate the color
+        flat out vec4 color; //don't interpolate the color
         void main()
         {
-           color = pixel_state;
+           if (pixel_state == 0) {
+             color = vec4(0.1, 0.1, 0.1, 0.1);
+           } else {
+             color = vec4(1, 1, 1, 1);
+           }
            gl_Position.xy = position.xy;
            gl_Position.zw = vec2(0.0, 1.0);
         }
@@ -53,10 +57,10 @@ class Renderer:
         self.fragment_shader = """
         #version 330
         
-        flat in int color;
+        flat in vec4 color;
         void main()
         {
-           gl_FragColor = vec4(color, color, color, color);
+           gl_FragColor = color;
         }
         """
 
