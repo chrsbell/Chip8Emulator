@@ -33,6 +33,15 @@ pyopengltk
 NumPy
 
     pip3 install numpy
+
+SciPy
+
+    pip3 install scipy
+    
+simpleaudio
+
+    pip3 install simpleaudio
+
 <!--stackedit_data:
 eyJoaXN0b3J5IjpbLTUzODIzMjM0OSwtMTY5MTU1NzUwXX0=
 -->
