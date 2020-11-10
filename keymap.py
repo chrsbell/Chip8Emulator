@@ -121,11 +121,12 @@ class Keymap:
 
     def process_keypress(self, event):
         if event.char in self.keyboard:
-            print('Hex key pressed: ', self.keyboard[event.char])
+            print('Hex key down: ', self.keyboard[event.char])
             self.key = self.keyboard[event.char]
             self.keydown = True
 
     def process_keyrelease(self, event):
+        print('Hex key released: ', self.keyboard[event.char])
         self.keydown = False
 
     def add_key(self, event):

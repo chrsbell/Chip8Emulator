@@ -32,6 +32,9 @@ class Interpreter:
     def __init__(self, display, keyboard, audio):
         """Chip-8 interpreter"""
 
+        # Number of instructions to execute per render call
+        self.num_cycles = 10
+
         # Interpreter can access 4KB of RAM
         self.memory_buffer = np.array([0] * 4096, np.ubyte)
         # 16 general purpose 8-bit registers
@@ -141,7 +144,7 @@ class Interpreter:
         """Stores the program in the memory buffer"""
         file_bin = bytes(file.read())
         program = file_bin.hex()
-        self.__init__(self.display, self.keyboard)
+        self.__init__(self.display, self.keyboard, self.audio)
         self.display.clear_screen()
         # Make sure program isn't too large
         if int(len(program) / 2 > (4096 - 0x200)):
@@ -219,8 +222,8 @@ class Interpreter:
     def _00EE(self, x, y, n, address, byte):
         """Return from a subroutine. The interpreter sets the program counter to the address at the top of the stack,
         then subtracts 1 from the stack pointer. """
-        self.stack_pointer -= 1
         self.program_counter = self.stack[self.stack_pointer] + 2
+        self.stack_pointer -= 1
 
     def _1nnn(self, x, y, n, address, byte):
         """Jump to location at address. The interpreter sets the program counter to address."""
@@ -229,10 +232,9 @@ class Interpreter:
     def _2nnn(self, x, y, n, address, byte):
         """Call subroutine at nnn. The interpreter increments the stack pointer, then puts the current PC on the top
         of the stack. The PC is then set to nnn. """
-        self.stack[self.stack_pointer] = self.program_counter
         self.stack_pointer += 1
+        self.stack[self.stack_pointer] = self.program_counter
         self.program_counter = address
-        # self.execute_instruction()
 
     def _3xkk(self, x, y, n, address, byte):
         """Skip next instruction if Vx = byte. The interpreter compares register Vx to byte, and if they are equal,
@@ -275,12 +277,12 @@ class Interpreter:
 
     def _8xy1(self, x, y, n, address, byte):
         """Set Vx = Vx OR Vy. Performs a bitwise OR on the values of Vx and Vy, then stores the result in Vx."""
-        self.register_v[x] |= self.register_v[y]
+        self.register_v[x] = self.register_v[x] | self.register_v[y]
         self.program_counter += 2
 
     def _8xy2(self, x, y, n, address, byte):
         """Set Vx = Vx AND Vy. Performs a bitwise AND on the values of Vx and Vy, then stores the result in Vx."""
-        self.register_v[x] &= self.register_v[y]
+        self.register_v[x] = self.register_v[x] & self.register_v[y]
         self.program_counter += 2
 
     def _8xy3(self, x, y, n, address, byte):
@@ -319,7 +321,7 @@ class Interpreter:
             self.register_v[0xF] = 0x01
         else:
             self.register_v[0xF] = 0x00
-        self.register_v[x] /= 2
+        self.register_v[x] = self.register_v[x] / 2
         self.program_counter += 2
 
     def _8xy7(self, x, y, n, address, byte):
@@ -359,7 +361,7 @@ class Interpreter:
 
     def _Bnnn(self, x, y, n, address, byte):
         """Jump to location nnn + V0. The program counter is set to nnn plus the value of V0."""
-        self.program_counter = address + self.register_v[0x00]
+        self.program_counter = address + self.register_v[0x0]
 
     def _Cxkk(self, x, y, n, address, byte):
         """Set Vx = random byte AND kk. The interpreter generates a random number from 0 to 255, which is then ANDed
@@ -374,6 +376,7 @@ class Interpreter:
         at coordinates (Vx, Vy). Sprites are XORed onto the existing screen. If this causes any pixels to be erased,
         VF is set to 1, otherwise it is set to 0. If the sprite is positioned so part of it is outside the
         coordinates of the display, it wraps around to the opposite side of the screen. """
+        self.register_v[0xF] = 0
         for j in range(n):
             # Add padding to fit 8 bits
             sprite = format(self.memory_buffer[self.register_i + j], '#010b')[2:]
@@ -381,8 +384,8 @@ class Interpreter:
                 vx = (self.register_v[x] + i) % self.display.width
                 vy = self.display.height - ((self.register_v[y] + j) % self.display.height) - 1
                 pixel_state = self.display.get_pixel(vx, vy)
-                if pixel_state and int(sprite[i]):
-                    # There was a collision
+                if pixel_state & int(sprite[i]) == 1:
+                    # A sprite was erased
                     self.register_v[0xF] = 1
                 self.display.set_pixel(vx, vy, int(sprite[i]) ^ pixel_state)
         self.program_counter += 2
@@ -427,6 +430,9 @@ class Interpreter:
     def _Fx18(self, x, y, n, address, byte):
         """Set sound timer = Vx. ST is set equal to the value of Vx."""
         self.register_s = self.register_v[x]
+        if self.debug:
+            print("Playing audio of duration: ", self.register_s / 60.0)
+        self.audio.play_square_wave(self.register_s / 60.0)
         self.program_counter += 2
         return
 
@@ -438,7 +444,7 @@ class Interpreter:
     def _Fx29(self, x, y, n, address, byte):
         """Set I = location of sprite for digit Vx. The value of I is set to the location for the hexadecimal sprite
         corresponding to the value of Vx. """
-        self.register_i = (x*5)
+        self.register_i = self.register_v[x] * 5
         self.program_counter += 2
 
     def _Fx33(self, x, y, n, address, byte):

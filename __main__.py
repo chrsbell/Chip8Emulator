@@ -54,7 +54,7 @@ def main():
 
     # Audio synthesizer
     audio = AudioSynthesizer()
-    audio.play_square_wave(5)
+
     # Chip-8 interpreter
     interpreter = Interpreter(display, keymap, audio)
 

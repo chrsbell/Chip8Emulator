@@ -26,6 +26,8 @@ from tkinter import messagebox
 from OpenGL.error import GLError
 from pyopengltk import OpenGLFrame
 import time
+import os
+import platform
 
 
 class Window(OpenGLFrame):
@@ -48,6 +50,9 @@ class Window(OpenGLFrame):
         self.keymap = keymap
         self.audio = audio
 
+        if platform.system() == 'Linux':
+            os.system('xset r off')
+
     def initgl(self):
         """Compile the shaders and creates the vertex buffers"""
         try:
@@ -65,7 +70,8 @@ class Window(OpenGLFrame):
         if self.file_io.file_open and not self.interpreter.error:
             # Check if executing Fx0A
             if not self.interpreter.wait_for_key:
-                self.interpreter.execute_instruction()
+                for i in range(self.interpreter.num_cycles):
+                    self.interpreter.execute_instruction()
             elif self.keymap.keydown:
                 # Continue execution from opcode Fx0A
                 x = self.interpreter.x
@@ -82,5 +88,7 @@ class Window(OpenGLFrame):
         self.master.title("Chip-8 Emulator " + "~ " + self.file_io.rom + " ~ FPS: " + str(int(1.0 / self.delta)))
 
     def close(self):
+        if platform.system() == 'Linux':
+            os.system('xset r on')
         self.display.destroy()
         self.tk.quit()

@@ -8,7 +8,7 @@ My attempt at an original Chip-8 Emulator using Python, currently developing. I 
  - [x] Window based with GUI
  - [x] Basic ROM support
  - [x] Remappable keyboard input
- - [ ] Sound
+ - [x] Sound
  - [ ] Support for loading/saving states
 ## Dependencies
 
@@ -33,6 +33,15 @@ pyopengltk
 NumPy
 
     pip3 install numpy
+
+SciPy
+
+    pip3 install scipy
+    
+simpleaudio
+
+    pip3 install simpleaudio
+
 <!--stackedit_data:
 eyJoaXN0b3J5IjpbLTUzODIzMjM0OSwtMTY5MTU1NzUwXX0=
 -->
