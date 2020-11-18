@@ -1,6 +1,8 @@
 # Chip-8 Emulator
 
-My attempt at an original Chip-8 Emulator using Python, currently developing. I referenced [Cowgod's Chip-8 Techincal Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM) and [Wikipedia](https://en.wikipedia.org/wiki/CHIP-8) to develop this as well as various documents on assembly instructions.
+Blog post: https://chrsbell.github.io/2020/11/designing-a-chip8-emulator-in-python/
+
+An original Chip-8 Emulator, made in Python. I referenced [Cowgod's Chip-8 Techincal Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM) and [Wikipedia](https://en.wikipedia.org/wiki/CHIP-8) to develop this as well as various documents on assembly instructions.
 
 ## Features
 
