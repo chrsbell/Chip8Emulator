@@ -6,6 +6,8 @@ Blog post: https://chrsbell.github.io/2020/11/designing-a-chip8-emulator-in-pyth
 
 An original Chip-8 Emulator, made in Python. I referenced [Cowgod's Chip-8 Techincal Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM) and [Wikipedia](https://en.wikipedia.org/wiki/CHIP-8) to develop this as well as various documents on assembly instructions.
 
+![](https://i.imgur.com/rVyEkXp.png)
+
 ## Features
 
 - [x] OpenGL 3.3 based using programmable pipeline
